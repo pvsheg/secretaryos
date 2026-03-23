@@ -1,7 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+// Emails with unlimited access — add your own email here
+const ADMIN_EMAILS = ['pvsheg@gmail.com']
+
+// Demo limits per document type per user
+const DEMO_LIMITS: Record<string, number> = {
+  board_minutes: 1,
+  agm_notice: 1,
+  roc_filing: 1,
+}
+
+const DOC_TYPE_LABELS: Record<string, string> = {
+  board_minutes: 'board minutes document',
+  agm_notice: 'AGM notice',
+  roc_filing: 'ROC filing',
+}
 
 const SYSTEM_PROMPTS: Record<string, string> = {
   board_minutes: `You are SecretaryOS, an expert AI assistant for Indian Company Secretaries. Generate legally precise board meeting minutes under the Companies Act 2013.
@@ -19,7 +37,7 @@ Legal rules — follow exactly:
 - Section 174: quorum — minimum 2 directors or 1/3 of total strength whichever is higher — state the fraction explicitly
 - Section 118(1): minutes to be signed within 30 days — always reference this in closure
 - Section 152 + 160: director appointment resolutions
-- Section 168: director resignation resolutions  
+- Section 168: director resignation resolutions
 - Section 188: related party transactions — note abstaining director by name
 - SS-1 (Secretarial Standard on Board Meetings): always reference in meeting details
 - Use RESOLVED THAT in capitals for all operative resolution parts
@@ -67,8 +85,62 @@ Legal rules:
 
 export async function POST(req: NextRequest) {
   try {
+    const cookieStore = cookies()
+
+    // Get authenticated user from Supabase
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) { return cookieStore.get(name)?.value },
+          set() {},
+          remove() {},
+        },
+      }
+    )
+
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorised. Please sign in.' }, { status: 401 })
+    }
+
+    const userEmail = user.email || ''
+    const isAdmin = ADMIN_EMAILS.includes(userEmail.toLowerCase())
+
     const body = await req.json()
-    const { doc_type = 'board_minutes', company_name, cin, registered_office, financial_year_end, meeting_date, meeting_venue, directors_present, agenda_items } = body
+    const {
+      doc_type = 'board_minutes',
+      company_name, cin, registered_office,
+      financial_year_end, meeting_date,
+      meeting_venue, directors_present, agenda_items,
+    } = body
+
+    // ── RATE LIMITING (skip for admins) ──────────────────────────────
+    if (!isAdmin) {
+      const limit = DEMO_LIMITS[doc_type] ?? 1
+
+      const { count, error: countError } = await supabase
+        .from('documents')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('type', doc_type)
+
+      if (countError) {
+        console.error('Rate limit check error:', countError)
+      } else if ((count ?? 0) >= limit) {
+        return NextResponse.json(
+          {
+            error: `Demo limit reached. You have used your free ${DOC_TYPE_LABELS[doc_type]}. This is a demo version — contact us to unlock full access.`,
+            limit_reached: true,
+            doc_type,
+          },
+          { status: 429 }
+        )
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────
 
     const formattedDate = meeting_date
       ? new Date(meeting_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -91,7 +163,7 @@ ${agenda_items}
 
 Generate the complete, legally precise document now. Output clean HTML only using the specified classes.`
 
-    const message = await client.messages.create({
+    const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 2000,
       system: SYSTEM_PROMPTS[doc_type] || SYSTEM_PROMPTS.board_minutes,
@@ -102,6 +174,7 @@ Generate the complete, legally precise document now. Output clean HTML only usin
     content = content.replace(/```html|```/g, '').trim()
 
     return NextResponse.json({ content, tokens: message.usage })
+
   } catch (error: any) {
     console.error('Generation error:', error)
     return NextResponse.json({ error: error.message || 'Generation failed' }, { status: 500 })

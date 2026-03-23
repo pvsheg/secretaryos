@@ -41,6 +41,7 @@ function GenerateForm() {
   const [saved, setSaved] = useState(false)
   const [step, setStep] = useState(0)
   const [downloading, setDownloading] = useState(false)
+  const [limitError, setLimitError] = useState('')
 
   useEffect(() => {
     supabase.from('clients').select('*, directors(name, din, designation)').order('company_name').then(({ data }) => {
@@ -66,7 +67,7 @@ function GenerateForm() {
 
   async function generate() {
     if (!selectedClient) return
-    setLoading(true); setOutput(''); setRawText(''); setSaved(false); setStep(0)
+    setLoading(true); setOutput(''); setRawText(''); setSaved(false); setStep(0); setLimitError('')
     const stepTimer = setInterval(() => setStep(s => Math.min(s + 1, LOADING_STEPS.length - 1)), 700)
     const start = Date.now()
 
@@ -84,7 +85,9 @@ function GenerateForm() {
       clearInterval(stepTimer)
       const data = await res.json()
       setGenTime(((Date.now() - start) / 1000).toFixed(1) + 's')
-      if (data.content) {
+      if (data.limit_reached) {
+        setLimitError(data.error || 'Demo limit reached.')
+      } else if (data.content) {
         setOutput(data.content)
         const tmp = document.createElement('div')
         tmp.innerHTML = data.content
@@ -342,6 +345,17 @@ function GenerateForm() {
                 <textarea className={`${inputCls} resize-none`} rows={4} value={form.agenda_items} onChange={e => setForm(f => ({ ...f, agenda_items: e.target.value }))} placeholder={`1. Approval of Q1 financials — approved unanimously\n2. Director appointment — approved`} required />
               </div>
             </div>
+
+            {limitError && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+                <span className="text-red-500 text-lg flex-shrink-0">⚠️</span>
+                <div>
+                  <p className="text-sm font-semibold text-red-700 mb-1">Demo limit reached</p>
+                  <p className="text-xs text-red-600 leading-relaxed">{limitError}</p>
+                  <p className="text-xs text-red-500 mt-2">Want full access? <a href="mailto:pvsheg@gmail.com" className="underline font-medium">Contact us</a></p>
+                </div>
+              </div>
+            )}
 
             <button onClick={generate} disabled={loading || !form.meeting_date || !form.agenda_items}
               className="w-full py-3.5 bg-ink text-white font-semibold rounded-xl hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm">
