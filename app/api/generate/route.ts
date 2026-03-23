@@ -5,10 +5,10 @@ import { cookies } from 'next/headers'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-// Emails with unlimited access — add your own email here
+// Emails with unlimited access
 const ADMIN_EMAILS = ['pvsheg@gmail.com']
 
-// Demo limits per document type per user
+// Demo limits per document type per user — counts every generation attempt
 const DEMO_LIMITS: Record<string, number> = {
   board_minutes: 1,
   agm_notice: 1,
@@ -87,7 +87,6 @@ export async function POST(req: NextRequest) {
   try {
     const cookieStore = cookies()
 
-    // Get authenticated user from Supabase
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -117,28 +116,35 @@ export async function POST(req: NextRequest) {
       meeting_venue, directors_present, agenda_items,
     } = body
 
-    // ── RATE LIMITING (skip for admins) ──────────────────────────────
+    // ── RATE LIMITING — checks generation_usage table, not documents ──
     if (!isAdmin) {
       const limit = DEMO_LIMITS[doc_type] ?? 1
 
       const { count, error: countError } = await supabase
-        .from('documents')
+        .from('generation_usage')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
-        .eq('type', doc_type)
+        .eq('doc_type', doc_type)
 
       if (countError) {
         console.error('Rate limit check error:', countError)
       } else if ((count ?? 0) >= limit) {
         return NextResponse.json(
           {
-            error: `Demo limit reached. You have used your free ${DOC_TYPE_LABELS[doc_type]}. This is a demo version — contact us to unlock full access.`,
+            error: `Demo limit reached. You have already generated a free ${DOC_TYPE_LABELS[doc_type]}. Contact us to unlock full access.`,
             limit_reached: true,
             doc_type,
           },
           { status: 429 }
         )
       }
+
+      // Log this generation attempt BEFORE calling Anthropic
+      // This prevents abuse even if someone spams the button quickly
+      await supabase.from('generation_usage').insert({
+        user_id: user.id,
+        doc_type,
+      })
     }
     // ─────────────────────────────────────────────────────────────────
 
