@@ -1,3 +1,5 @@
+export type DocType = 'board_minutes' | 'agm_notice' | 'roc_filing'
+
 export interface Client {
   id: string
   user_id: string
@@ -25,7 +27,7 @@ export interface Document {
   id: string
   client_id: string
   user_id: string
-  type: 'board_minutes' | 'agm_notice' | 'roc_filing' | 'other'
+  type: DocType | 'other'
   title: string
   content: string
   metadata: {
@@ -35,11 +37,15 @@ export interface Document {
     directors_present?: string
   }
   created_at: string
-  client?: Client
+}
+
+export interface DocumentWithClient extends Document {
+  clients: Pick<Client, 'id' | 'company_name' | 'cin' | 'registered_office'> | null
 }
 
 export interface GenerateRequest {
   client_id: string
+  doc_type: DocType
   company_name: string
   cin: string
   registered_office: string

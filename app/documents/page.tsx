@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
+import type { DocumentWithClient } from '@/types'
 
 const TYPE_LABELS: Record<string, string> = {
   board_minutes: 'Board Minutes',
@@ -19,8 +20,8 @@ const TYPE_COLORS: Record<string, string> = {
 
 export default async function DocumentsPage() {
   const supabase = createServerSupabaseClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) redirect('/auth')
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth')
 
   const { data: documents } = await supabase
     .from('documents')
@@ -52,7 +53,7 @@ export default async function DocumentsPage() {
           </div>
         ) : (
           <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
-            {documents.map((doc: any, idx: number) => (
+            {(documents as DocumentWithClient[]).map((doc, idx) => (
               <Link key={doc.id} href={`/documents/${doc.id}`}
                 className={`flex items-center gap-5 px-6 py-4 hover:bg-slate-50 transition-colors ${idx !== 0 ? 'border-t border-slate-100' : ''}`}>
                 <div className="w-10 h-10 bg-ink rounded-xl flex items-center justify-center text-white text-sm flex-shrink-0">
@@ -60,7 +61,7 @@ export default async function DocumentsPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-sm text-ink truncate">{doc.title}</div>
-                  <div className="text-xs text-slate-500 mt-0.5">{(doc.clients as any)?.company_name}</div>
+                  <div className="text-xs text-slate-500 mt-0.5">{doc.clients?.company_name}</div>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
                   <span className={`text-xs px-2 py-1 rounded-lg border font-medium ${TYPE_COLORS[doc.type]}`}>

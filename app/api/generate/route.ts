@@ -2,26 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { ADMIN_EMAILS, DOC_TYPE_LABELS } from '@/lib/constants'
+import type { DocType, GenerateRequest } from '@/types'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-// Emails with unlimited access
-const ADMIN_EMAILS = ['pvsheg@gmail.com']
-
-// Demo limits per document type per user — counts every generation attempt
-const DEMO_LIMITS: Record<string, number> = {
-  board_minutes: 1,
-  agm_notice: 1,
-  roc_filing: 1,
-}
-
-const DOC_TYPE_LABELS: Record<string, string> = {
-  board_minutes: 'board minutes document',
-  agm_notice: 'AGM notice',
-  roc_filing: 'ROC filing',
-}
-
-const SYSTEM_PROMPTS: Record<string, string> = {
+const SYSTEM_PROMPTS: Record<DocType, string> = {
   board_minutes: `You are SecretaryOS, an expert AI assistant for Indian Company Secretaries. Generate legally precise board meeting minutes under the Companies Act 2013.
 
 Output using these exact HTML classes only — no markdown, no code blocks:
@@ -80,7 +66,7 @@ Legal rules:
 - AOC-4: Section 137 financial statements
 - DIR-12: Section 170 director changes
 - INC-22: Section 12 registered office
-- Use FURTHER RESOLVED THAT for consequential resolutions`
+- Use FURTHER RESOLVED THAT for consequential resolutions`,
 }
 
 export async function POST(req: NextRequest) {
@@ -108,7 +94,7 @@ export async function POST(req: NextRequest) {
     const userEmail = user.email || ''
     const isAdmin = ADMIN_EMAILS.includes(userEmail.toLowerCase())
 
-    const body = await req.json()
+    const body: GenerateRequest = await req.json()
     const {
       doc_type = 'board_minutes',
       company_name, cin, registered_office,
@@ -116,35 +102,28 @@ export async function POST(req: NextRequest) {
       meeting_venue, directors_present, agenda_items,
     } = body
 
-    // ── RATE LIMITING — checks generation_usage table, not documents ──
+    // ── RATE LIMITING — atomic INSERT; unique constraint (user_id, doc_type) is the lock.
+    // First generation: INSERT succeeds. Second attempt: unique violation → 429.
+    // No race condition possible since the DB constraint is enforced atomically.
     if (!isAdmin) {
-      const limit = DEMO_LIMITS[doc_type] ?? 1
-
-      const { count, error: countError } = await supabase
+      const { error: usageError } = await supabase
         .from('generation_usage')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('doc_type', doc_type)
+        .insert({ user_id: user.id, doc_type })
 
-      if (countError) {
-        console.error('Rate limit check error:', countError)
-      } else if ((count ?? 0) >= limit) {
-        return NextResponse.json(
-          {
-            error: `Demo limit reached. You have already generated a free ${DOC_TYPE_LABELS[doc_type]}. Contact us to unlock full access.`,
-            limit_reached: true,
-            doc_type,
-          },
-          { status: 429 }
-        )
+      if (usageError) {
+        if (usageError.code === '23505') {
+          return NextResponse.json(
+            {
+              error: `Demo limit reached. You have already generated a free ${DOC_TYPE_LABELS[doc_type as DocType]}. Contact us to unlock full access.`,
+              limit_reached: true,
+              doc_type,
+            },
+            { status: 429 }
+          )
+        }
+        // Non-constraint DB error — log but don't block generation
+        console.error('Usage tracking error:', usageError)
       }
-
-      // Log this generation attempt BEFORE calling Anthropic
-      // This prevents abuse even if someone spams the button quickly
-      await supabase.from('generation_usage').insert({
-        user_id: user.id,
-        doc_type,
-      })
     }
     // ─────────────────────────────────────────────────────────────────
 
@@ -172,17 +151,18 @@ Generate the complete, legally precise document now. Output clean HTML only usin
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 2000,
-      system: SYSTEM_PROMPTS[doc_type] || SYSTEM_PROMPTS.board_minutes,
+      system: SYSTEM_PROMPTS[doc_type as DocType] || SYSTEM_PROMPTS.board_minutes,
       messages: [{ role: 'user', content: userPrompt }]
     })
 
-    let content = (message.content[0] as any).text || ''
+    let content = (message.content[0] as { type: string; text: string }).text || ''
     content = content.replace(/```html|```/g, '').trim()
 
     return NextResponse.json({ content, tokens: message.usage })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Generation failed'
     console.error('Generation error:', error)
-    return NextResponse.json({ error: error.message || 'Generation failed' }, { status: 500 })
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

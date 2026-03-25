@@ -31,12 +31,12 @@ export default function NewClientPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true); setError('')
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) { router.push('/auth'); return }
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { router.push('/auth'); return }
 
     const { data: client, error: clientErr } = await supabase
       .from('clients')
-      .insert({ ...form, user_id: session.user.id })
+      .insert({ ...form, user_id: user.id })
       .select().single()
 
     if (clientErr) { setError(clientErr.message); setLoading(false); return }

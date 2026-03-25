@@ -2,11 +2,12 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
+import type { Client, Director, Document } from '@/types'
 
 export default async function ClientDetailPage({ params }: { params: { id: string } }) {
   const supabase = createServerSupabaseClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) redirect('/auth')
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth')
 
   const [{ data: client }, { data: documents }] = await Promise.all([
     supabase.from('clients').select('*, directors(*)').eq('id', params.id).single(),
@@ -15,7 +16,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
 
   if (!client) notFound()
 
-  const directors = (client as any).directors || []
+  const directors: Director[] = (client as Client & { directors: Director[] }).directors || []
 
   return (
     <div className="min-h-screen bg-[#FDFCF9]">
@@ -75,7 +76,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                 <p className="text-sm text-slate-400">No directors on record</p>
               ) : (
                 <div className="space-y-3">
-                  {directors.map((dir: any) => (
+                  {directors.map((dir) => (
                     <div key={dir.id} className="flex items-start gap-3">
                       <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-xs font-bold text-slate-600 flex-shrink-0 mt-0.5">
                         {dir.name.charAt(0)}
@@ -110,7 +111,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
               </div>
             ) : (
               <div className="space-y-3">
-                {documents.map((doc: any) => (
+                {(documents as Document[]).map((doc) => (
                   <Link key={doc.id} href={`/documents/${doc.id}`}
                     className="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-2xl hover:border-slate-200 transition-colors">
                     <div className="w-9 h-9 bg-slate-100 rounded-xl flex items-center justify-center text-base flex-shrink-0">

@@ -2,11 +2,12 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
+import type { Client } from '@/types'
 
 export default async function ClientsPage() {
   const supabase = createServerSupabaseClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) redirect('/auth')
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth')
 
   const { data: clients } = await supabase
     .from('clients')
@@ -38,7 +39,7 @@ export default async function ClientsPage() {
           </div>
         ) : (
           <div className="grid gap-4">
-            {clients.map((client: any) => (
+            {(clients as (Client & { directors: { count: number }[] })[]).map((client) => (
               <div key={client.id} className="bg-white border border-slate-100 rounded-2xl p-5 flex items-center gap-5 hover:border-slate-200 transition-colors">
                 <div className="w-12 h-12 bg-ink rounded-xl flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
                   {client.company_name.charAt(0)}
@@ -50,7 +51,7 @@ export default async function ClientsPage() {
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
                   <div className="text-center">
-                    <div className="text-lg font-bold text-ink">{(client.directors as any)?.[0]?.count || 0}</div>
+                    <div className="text-lg font-bold text-ink">{client.directors?.[0]?.count || 0}</div>
                     <div className="text-xs text-slate-400">Directors</div>
                   </div>
                   <div className="flex gap-2">

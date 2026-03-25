@@ -89,3 +89,31 @@ create index if not exists directors_client_id_idx on directors(client_id);
 create index if not exists documents_client_id_idx on documents(client_id);
 create index if not exists documents_user_id_idx on documents(user_id);
 create index if not exists documents_created_at_idx on documents(created_at desc);
+
+
+create table if not exists generation_usage (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  doc_type text not null,
+  created_at timestamptz default now() not null
+);
+
+alter table generation_usage enable row level security;
+
+create policy "Users can view own usage" on generation_usage
+  for select using (auth.uid() = user_id);
+
+create policy "Users can insert own usage" on generation_usage
+  for insert with check (auth.uid() = user_id);
+
+create index if not exists generation_usage_user_doc_idx
+  on generation_usage(user_id, doc_type);
+
+-- Atomic rate limiting: unique constraint ensures the INSERT itself is the lock.
+-- First generation succeeds; second INSERT raises a unique violation (code 23505) → 429.
+-- If you have existing duplicate rows from before this constraint, run this cleanup first:
+--   DELETE FROM generation_usage a USING generation_usage b
+--   WHERE a.id > b.id AND a.user_id = b.user_id AND a.doc_type = b.doc_type;
+alter table generation_usage
+  add constraint if not exists generation_usage_user_doc_unique
+  unique (user_id, doc_type);

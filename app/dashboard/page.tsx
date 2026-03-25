@@ -2,18 +2,24 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
+import type { Client, DocumentWithClient } from '@/types'
 
 export default async function DashboardPage() {
   const supabase = createServerSupabaseClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) redirect('/auth')
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth')
 
-  const [{ data: clients }, { data: documents }] = await Promise.all([
+  const [
+    { data: clients },
+    { data: recentDocuments },
+    { count: totalDocuments },
+  ] = await Promise.all([
     supabase.from('clients').select('*').order('created_at', { ascending: false }),
     supabase.from('documents').select('*, clients(company_name)').order('created_at', { ascending: false }).limit(5),
+    supabase.from('documents').select('*', { count: 'exact', head: true }),
   ])
 
-  const firstName = session.user.user_metadata?.full_name?.split(' ')[0] || 'there'
+  const firstName = user.user_metadata?.full_name?.split(' ')[0] || 'there'
   const now = new Date()
   const hour = now.getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
@@ -33,8 +39,8 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           {[
             { label: 'Total clients', val: clients?.length || 0, icon: '🏢', color: 'bg-blue-50 border-blue-100' },
-            { label: 'Documents generated', val: documents?.length || 0, icon: '📄', color: 'bg-green-50 border-green-100' },
-            { label: 'Hours saved (est.)', val: `${((documents?.length || 0) * 1.5).toFixed(0)}h`, icon: '⏱️', color: 'bg-amber-50 border-amber-100' },
+            { label: 'Documents generated', val: totalDocuments || 0, icon: '📄', color: 'bg-green-50 border-green-100' },
+            { label: 'Hours saved (est.)', val: `${(((totalDocuments || 0) * 1.5)).toFixed(0)}h`, icon: '⏱️', color: 'bg-amber-50 border-amber-100' },
             { label: 'Compliance score', val: '100%', icon: '✅', color: 'bg-emerald-50 border-emerald-100' },
           ].map(s => (
             <div key={s.label} className={`border rounded-2xl p-5 ${s.color}`}>
@@ -81,7 +87,7 @@ export default async function DashboardPage() {
               <Link href="/documents" className="text-xs text-slate-500 hover:text-ink">View all →</Link>
             </div>
 
-            {!documents?.length ? (
+            {!recentDocuments?.length ? (
               <div className="bg-white border border-dashed border-slate-200 rounded-2xl p-10 text-center">
                 <div className="text-4xl mb-3">📄</div>
                 <p className="font-semibold text-ink mb-1">No documents yet</p>
@@ -92,7 +98,7 @@ export default async function DashboardPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {documents.map((doc: any) => (
+                {(recentDocuments as DocumentWithClient[]).map(doc => (
                   <Link key={doc.id} href={`/documents/${doc.id}`} className="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-2xl hover:border-slate-200 transition-colors">
                     <div className="w-10 h-10 bg-gold-pale rounded-xl flex items-center justify-center text-lg flex-shrink-0">📄</div>
                     <div className="flex-1 min-w-0">
