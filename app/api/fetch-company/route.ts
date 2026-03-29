@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const WORKER_URL = process.env.CLOUDFLARE_WORKER_URL || ''
 
+async function parseWorkerResponse(res: Response, context: string): Promise<unknown> {
+  const contentType = res.headers.get('content-type') || ''
+  if (!contentType.includes('application/json')) {
+    // Worker returned HTML — log the body server-side to help debug the root cause
+    const body = await res.text()
+    console.error(`[fetch-company] ${context}: worker returned non-JSON (status ${res.status}). Body: ${body.slice(0, 300)}`)
+    return null
+  }
+  return res.json()
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { cin } = await req.json()
@@ -22,7 +33,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Call Cloudflare Worker
     const res = await fetch(`${WORKER_URL}/lookup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -30,11 +40,19 @@ export async function POST(req: NextRequest) {
       signal: AbortSignal.timeout(8000),
     })
 
-    const data = await res.json()
+    const data = await parseWorkerResponse(res, `POST /lookup CIN=${cinUpper}`)
+    if (!data) {
+      return NextResponse.json(
+        { error: 'MCA database returned an unexpected response. Please fill in details manually.', found: false },
+        { status: 502 }
+      )
+    }
+
     return NextResponse.json(data)
 
-  } catch (error: any) {
-    console.error('Fetch company error:', error)
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    console.error('fetch-company POST error:', msg)
     return NextResponse.json(
       { error: 'Could not reach MCA database. Please fill in details manually.', found: false },
       { status: 500 }
@@ -49,7 +67,7 @@ export async function GET(req: NextRequest) {
     const state = searchParams.get('state')
 
     if (!q || q.length < 3) {
-      return NextResponse.json({ error: 'Search query must be at least 3 characters.' }, { status: 400 })
+      return NextResponse.json({ results: [], count: 0 })
     }
 
     if (!WORKER_URL) {
@@ -63,10 +81,16 @@ export async function GET(req: NextRequest) {
       signal: AbortSignal.timeout(8000),
     })
 
-    const data = await res.json()
+    const data = await parseWorkerResponse(res, `GET /search q=${q}`)
+    if (!data) {
+      return NextResponse.json({ results: [], count: 0 })
+    }
+
     return NextResponse.json(data)
 
-  } catch (error: any) {
-    return NextResponse.json({ results: [], count: 0, error: error.message })
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    console.error('fetch-company GET error:', msg)
+    return NextResponse.json({ results: [], count: 0 })
   }
 }
