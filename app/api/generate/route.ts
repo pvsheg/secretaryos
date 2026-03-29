@@ -21,80 +21,105 @@ const DOC_TYPE_LABELS: Record<string, string> = {
 }
 
 const SYSTEM_PROMPTS: Record<string, string> = {
-  board_minutes: `You are SecretaryOS, an expert AI assistant for Indian Company Secretaries.
+  board_minutes: `You are SecretaryOS, an expert AI assistant for Indian Company Secretaries. Generate legally precise, complete board meeting minutes under the Companies Act 2013 and Secretarial Standards.
 
-Generate legally precise board meeting minutes under the Companies Act 2013 and Secretarial Standards.
+CRITICAL RULES — NEVER VIOLATE:
+1. NEVER leave placeholder text like "[To be populated...]" or "[Insert here]" — always use the actual data provided
+2. If directors are provided, list every single one with their full name, DIN and designation
+3. If no directors are provided for a section (e.g. leave of absence), OMIT that section entirely — do not show it with a placeholder
+4. Keep resolution text concise — RESOLVED THAT operative text should be 2-4 lines maximum
+5. Do NOT pad with excessive statutory recitals — one brief paragraph of background per resolution is enough
+6. The document must be COMPLETE — never cut off mid-sentence. If you have many agenda items, keep each resolution brief to fit within the output limit
+7. Never show the generation date — only show the meeting date provided
 
-OUTPUT FORMAT — use these exact HTML classes only, no markdown:
-- <p class="doc-title-main"> — main title, centered, uppercase
-- <p class="doc-center"> — company details block
-- <p class="doc-section"> — section headers (uppercase, gold color)
-- <p class="doc-line"> — indented content lines
-- <p class="doc-resolution"> — resolutions (use <strong>RESOLVED THAT</strong> in caps)
-- <p class="doc-further"> — for FURTHER RESOLVED THAT clauses
-- <div class="doc-sig"><div>..Chairman..</div><div style="text-align:right">..CS..</div></div>
+OUTPUT FORMAT — use ONLY these exact HTML classes, no markdown, no inline styles:
+- <p class="doc-title-main"> — main title, centered, bold, uppercase
+- <p class="doc-center"> — company details (name, CIN, address), centered
+- <p class="doc-section"> — section headers e.g. "I. CONSTITUTION OF THE MEETING"
+- <p class="doc-line"> — body text paragraphs
+- <p class="doc-resolution"> — resolution text, always start with <strong>RESOLVED THAT</strong>
+- <p class="doc-further"> — consequential clauses starting with <strong>FURTHER RESOLVED THAT</strong>
+- <div class="doc-sig">...</div> — signature block at the end
 
-LEGAL RULES — follow exactly:
-- Section 173: board meetings convened under this section, read with SS-1
-- Section 174: quorum — state exact fraction (e.g. 2 out of 3 directors = 66.67%)
-- Section 118(1): minutes to be signed within 30 days — always state this in closure
-- Section 152 + 160: director appointment — include DIN, effective date, consent
-- Section 168 + DIR-12: director resignation — include effective date, DIR-12 filing obligation
-- Section 188: RPT — name the abstaining director explicitly in resolution text
-- Section 179: general board powers
-- Section 180: borrowing limits
-- Section 196 + Schedule V: MD/WTD appointment
-- SS-1 (Secretarial Standard on Board Meetings): reference throughout
-- Use RESOLVED THAT in capitals for all operative parts
-- Use FURTHER RESOLVED THAT for consequential authorisations
-- Number resolutions: FIRST, SECOND, THIRD etc.
-- Never alter or invent DIN numbers provided
-- Include authorisation of KMP/CS to file any required forms with MCA
-- Use formal Indian legal English — not American style`,
+DOCUMENT STRUCTURE — follow this exact order:
+1. Title: MINUTES OF THE MEETING OF THE BOARD OF DIRECTORS
+2. Company name, CIN, registered office, meeting date, venue, convened under Section 173 read with SS-1
+3. I. CONSTITUTION OF THE MEETING — one paragraph confirming the meeting was held
+4. II. NOTICE AND QUORUM — confirm notice was given per Section 173(3), state quorum fraction e.g. "2 out of 3 directors (66.67%)" per Section 174(1)
+5. III. DIRECTORS PRESENT — list each director: "Name (DIN: XXXXXXXX), Designation — Present in person"
+6. IV. INVITEES — Company Secretary present to record proceedings. Omit if no other invitees.
+7. V. COMMENCEMENT — Chairman called meeting to order, CS confirmed quorum
+8. VI. CONFIRMATION OF NOTICE — notice acknowledged per Section 173(3) and SS-1 Clause 1.3
+9. VII. CONFIRMATION OF PREVIOUS MINUTES — confirmed per Section 118(1) and SS-1 Clause 7.1
+10. VIII. TRANSACTIONS OF BUSINESS — all resolutions here, numbered FIRST, SECOND, THIRD etc
+11. IX. CLOSURE — meeting concluded, minutes to be signed within 30 days per Section 118(1)
+12. Signature block — Chairman on left, Company Secretary on right
+
+RESOLUTION FORMAT — keep it tight:
+<p class="doc-section">FIRST RESOLUTION — [SHORT TITLE IN CAPS]</p>
+<p class="doc-line">The Chairman introduced the matter of [brief one line description].</p>
+<p class="doc-resolution"><strong>RESOLVED THAT</strong> [operative text — 2 to 3 lines maximum, cite the relevant section].</p>
+<p class="doc-further"><strong>FURTHER RESOLVED THAT</strong> [name], Company Secretary (Membership No. [if provided]), be and is hereby authorised to do all such acts, deeds and things and to file such forms with the Registrar of Companies as may be necessary to give effect to the foregoing resolution.</p>
+
+LEGAL REFERENCES:
+- Section 173: board meeting convening
+- Section 174(1): quorum — one-third of total strength or 2 directors, whichever is higher
+- Section 118(1): minutes signing within 30 days
+- Section 152/160: director appointment with DIN
+- Section 168 + DIR-12: director resignation within 30 days
+- Section 188: RPT — name abstaining director
+- Section 92 + MGT-7: annual return filing
+- Section 137 + AOC-4: financial statements filing
+- SS-1: Secretarial Standard on Board Meetings throughout`,
 
   agm_notice: `You are SecretaryOS generating a formal AGM Notice under the Companies Act 2013.
 
-OUTPUT FORMAT — use these exact HTML classes, no markdown:
+CRITICAL RULES:
+1. NEVER leave placeholder text — use actual data provided
+2. Keep the notice complete and self-contained
+3. Include the full explanatory statement for every special business item
+4. Never cut off mid-sentence — keep ordinary business brief to allow space for special business
+
+OUTPUT FORMAT — use ONLY these HTML classes:
 - <p class="doc-title-main"> — notice title
 - <p class="doc-center"> — company details
 - <p class="doc-section"> — section headers
-- <p class="doc-line"> — content lines
-- <p class="doc-resolution"> — special business resolutions
+- <p class="doc-line"> — body text
+- <p class="doc-resolution"> — special business resolutions with <strong>RESOLVED THAT</strong>
 
 LEGAL RULES:
 - Section 96: AGM within 6 months of financial year end
-- Section 101: minimum 21 clear days notice — state this explicitly
+- Section 101: minimum 21 clear days notice — state explicitly
 - Section 102: Explanatory Statement mandatory for all special business
-- SS-2 (Secretarial Standard on General Meetings): reference throughout
-- Section 105: proxy notice (proxy must be member, form MGT-11)
-- Section 103: quorum requirements
-- Ordinary business: adoption of accounts, dividend, director retirement by rotation, auditor
-- Special business: everything else — requires full explanatory statement with material facts
-- Include e-voting details if applicable
-- Include attendance slip and proxy form instructions`,
+- Section 105: proxy notice — member must be eligible, Form MGT-11, 48 hours before meeting
+- Section 103: quorum for public company — 5 members personally present
+- SS-2: Secretarial Standard on General Meetings throughout
+- Ordinary business: adoption of accounts, dividend, director retirement by rotation, auditor reappointment
+- Special business: everything else — full explanatory statement required`,
 
   roc_filing: `You are SecretaryOS generating board resolutions for MCA/ROC filings under the Companies Act 2013.
 
-OUTPUT FORMAT — use these exact HTML classes, no markdown:
+CRITICAL RULES:
+1. NEVER leave placeholder text — use actual data provided
+2. Keep each resolution concise — RESOLVED THAT text should be 2-3 lines
+3. Always include FURTHER RESOLVED THAT authorising the CS/KMP to file the relevant form
+4. Complete the document fully — never cut off
+
+OUTPUT FORMAT — use ONLY these HTML classes:
 - <p class="doc-title-main"> — resolution title
 - <p class="doc-center"> — company details
 - <p class="doc-section"> — section headers
-- <p class="doc-line"> — content
-- <p class="doc-resolution"> — RESOLVED THAT resolutions
-- <p class="doc-further"> — FURTHER RESOLVED THAT authorisations
+- <p class="doc-line"> — body text
+- <p class="doc-resolution"> — <strong>RESOLVED THAT</strong> operative text
+- <p class="doc-further"> — <strong>FURTHER RESOLVED THAT</strong> authorisation clauses
 
-LEGAL RULES:
-- Always cite the exact MCA form being authorised
-- Include authorisation of specific named KMP/CS to sign and file
-- Include certification authority clause
-- MGT-7: Section 92 annual return
-- AOC-4: Section 137 financial statements filing
-- DIR-12: Section 170 director changes, within 30 days of change
-- INC-22: Section 12 registered office
-- PAS-3: Section 42/62 share allotment
-- SH-7: Section 61 capital alteration
-- Use FURTHER RESOLVED THAT for each authorisation clause
-- Include digital signature authorisation where required`,
+LEGAL RULES — cite exact form and section for each resolution:
+- MGT-7: Section 92 annual return — file within 60 days of AGM
+- AOC-4: Section 137 financial statements — file within 30 days of AGM
+- DIR-12: Section 170 director changes — file within 30 days of change
+- INC-22: Section 12 registered office change
+- PAS-3: Section 42/62 share allotment — file within 15 days
+- SH-7: Section 61 capital increase`,
 }
 
 export async function POST(req: NextRequest) {
@@ -166,7 +191,7 @@ export async function POST(req: NextRequest) {
         .filter((key: string) => AGENDA_LIBRARY[key])
         .map((key: string, idx: number) => {
           const item = AGENDA_LIBRARY[key]
-          return `${idx + 1}. ${item.label} — Resolution regarding ${item.resolution_template} under ${item.sections.join(', ')}`
+          return `${idx + 1}. ${item.label} — under ${item.sections.join(', ')}`
         })
         .join('\n')
       agendaContext = agendaDetails || agenda_items
@@ -174,34 +199,38 @@ export async function POST(req: NextRequest) {
       agendaContext = agenda_items
     }
 
-    const userPrompt = `Generate a complete ${doc_type.replace(/_/g, ' ')} document for:
+    const userPrompt = `Generate a complete, legally precise ${doc_type.replace(/_/g, ' ')} document using the following details. Use every piece of information provided — do not leave any placeholders.
 
-Company: ${company_name}
+COMPANY DETAILS:
+Company Name: ${company_name}
 CIN: ${cin}
 Company Class: ${company_class || 'Private Limited'}
 Registered Office: ${registered_office}
 Financial Year End: ${financial_year_end}
 ${authorised_capital ? `Authorised Capital: ${authorised_capital}` : ''}
 ${paid_up_capital ? `Paid-up Capital: ${paid_up_capital}` : ''}
-Meeting Date: ${formattedDate}
-Meeting Venue: ${meeting_venue}
-Compliance Category: ${compliance_category || 'Not specified'}
 
-Directors Present:
-${directors_present}
+MEETING DETAILS:
+Date: ${formattedDate}
+Venue: ${meeting_venue}
+${compliance_category ? `Compliance Category: ${compliance_category}` : ''}
 
-Agenda Items and Resolutions Required:
-${agendaContext}
+DIRECTORS PRESENT (use these exact names and DINs — do not leave this section as a placeholder):
+${directors_present || 'No director details provided — note this in the document'}
 
-Generate the complete, legally precise document now.
-- Include all required statutory references
-- Include FURTHER RESOLVED THAT clauses for MCA filing authorisations where applicable
-- Include the Company Secretary's authorisation to certify and file relevant forms
-- Output clean HTML only using the specified classes`
+AGENDA ITEMS TO RESOLVE:
+${agendaContext || agenda_items}
+
+GENERATION RULES:
+- Fill in ALL sections with actual data — never write "[To be populated]" or similar placeholders
+- Keep each resolution concise — RESOLVED THAT text should be 2-3 lines only
+- If a section has no data (e.g. no directors on leave of absence), omit that section entirely
+- The document MUST be complete — do not cut off. Keep resolutions brief to ensure completeness
+- Output clean HTML only using the specified CSS classes`
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 2500,
+      max_tokens: 4000,  // Increased from 2500 to prevent cutoff
       system: SYSTEM_PROMPTS[doc_type] || SYSTEM_PROMPTS.board_minutes,
       messages: [{ role: 'user', content: userPrompt }]
     })
