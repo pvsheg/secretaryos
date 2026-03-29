@@ -34,13 +34,16 @@ export default function NewClientPage() {
   const [directors, setDirectors] = useState<Director[]>([emptyDirector()])
 
   // Debounced company name search
+  // Call Worker directly — it has CORS enabled so no need to proxy through Next.js
   useEffect(() => {
     if (nameSearch.length < 3) { setNameResults([]); return }
     clearTimeout(searchTimer.current)
     searchTimer.current = setTimeout(async () => {
       setSearchLoading(true)
       try {
-        const res = await fetch(`/api/fetch-company?q=${encodeURIComponent(nameSearch)}`)
+        const workerUrl = process.env.NEXT_PUBLIC_CLOUDFLARE_WORKER_URL
+        if (!workerUrl) { setSearchLoading(false); return }
+        const res = await fetch(`${workerUrl}/search?q=${encodeURIComponent(nameSearch)}&limit=15`)
         const data = await res.json()
         setNameResults(data.results || [])
       } catch { setNameResults([]) }
@@ -86,7 +89,7 @@ export default function NewClientPage() {
         body: JSON.stringify({ cin }),
       })
       const data = await res.json()
-      if (data.error && data.found === false) {
+      if (data.error && !data.found === false) {
         setFetchOk(false)
         setFetchMsg(data.error)
         setForm(f => ({ ...f, cin }))
