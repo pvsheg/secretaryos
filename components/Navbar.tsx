@@ -41,6 +41,20 @@ export default function Navbar() {
             {link.label}
           </Link>
         ))}
+
+        {/* MCA Database link — subtle badge to show scale */}
+        <Link
+          href="/mca-data"
+          className={clsx(
+            'px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5',
+            pathname.startsWith('/mca-data')
+              ? 'bg-ink text-white'
+              : 'text-slate-600 hover:text-ink hover:bg-slate-100'
+          )}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block flex-shrink-0"></span>
+          20L+ Companies
+        </Link>
       </div>
       <button
         onClick={handleLogout}
