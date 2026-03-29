@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     const fullHtml = buildDocumentHtml(html, { companyName, cin, meetingDate })
     const pdfBuffer = await generatePDF(fullHtml)
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${fileName || 'document'}.pdf"`,
@@ -33,7 +33,6 @@ export async function POST(req: NextRequest) {
 
 async function generatePDF(html: string): Promise<Buffer> {
   let browser: any = null
-
   try {
     const chromium = require('@sparticuz/chromium')
     const puppeteer = require('puppeteer-core')
@@ -71,15 +70,11 @@ function buildDocumentHtml(content: string, meta: { companyName?: string; cin?: 
   @page { size: A4; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { width: 210mm; font-family: 'Times New Roman', Times, serif; font-size: 11pt; color: #1a1a1a; background: white; }
-
   .doc-header { background: #0A0F1E; padding: 10px 40px; display: flex; justify-content: space-between; align-items: center; position: fixed; top: 0; left: 0; right: 0; }
   .doc-header-brand { color: #B8973A; font-size: 10pt; font-weight: bold; letter-spacing: 2px; font-family: Arial, sans-serif; }
   .doc-header-tag { color: #888; font-size: 8pt; font-family: Arial, sans-serif; }
-
   .doc-footer { position: fixed; bottom: 0; left: 0; right: 0; background: #F8F8F6; border-top: 0.5px solid #ddd; padding: 5px 40px; display: flex; justify-content: space-between; font-size: 7.5pt; color: #999; font-family: Arial, sans-serif; }
-
   .doc-body { margin-top: 46px; margin-bottom: 32px; padding: 28px 42px 20px; }
-
   .doc-title-main { font-size: 13.5pt; font-weight: bold; text-align: center; text-transform: uppercase; letter-spacing: 0.5px; color: #0A0F1E; margin-bottom: 5px; line-height: 1.3; }
   .doc-center { text-align: center; font-size: 10pt; color: #333; margin-bottom: 3px; line-height: 1.5; }
   .doc-section { font-size: 9pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1.5px; color: #B8973A; margin-top: 18pt; margin-bottom: 5pt; padding-bottom: 3pt; border-bottom: 0.5px solid #e0e0e0; font-family: Arial, sans-serif; page-break-after: avoid; }
