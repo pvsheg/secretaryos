@@ -85,6 +85,9 @@ function GenerateForm() {
   const [saved, setSaved] = useState(false)
   const [step, setStep] = useState(0)
   const [downloading, setDownloading] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editedOutput, setEditedOutput] = useState('')
+  const editorRef = useRef<HTMLDivElement>(null)
   const [limitError, setLimitError] = useState('')
 
   useEffect(() => {
@@ -144,6 +147,8 @@ function GenerateForm() {
         setLimitError(data.error || 'Demo limit reached.')
       } else if (data.content) {
         setOutput(data.content)
+        setEditedOutput(data.content)
+        setIsEditing(false)
         const tmp = document.createElement('div')
         tmp.innerHTML = data.content
         setRawText(tmp.innerText || tmp.textContent || '')
@@ -155,13 +160,18 @@ function GenerateForm() {
     setLoading(false)
   }
 
+  function getCurrentContent() {
+    if (editorRef.current) return editorRef.current.innerHTML
+    return editedOutput || output
+  }
+
   async function saveDocument() {
     if (!selectedClient || !output) return
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
     const title = `${selectedClient.company_name} — ${DOC_TYPES.find(d => d.id === docType)?.label} — ${form.meeting_date}`
     await supabase.from('documents').insert({
-      client_id: selectedClient.id, user_id: session.user.id, type: docType, title, content: output,
+      client_id: selectedClient.id, user_id: session.user.id, type: docType, title, content: getCurrentContent(),
       metadata: { meeting_date: form.meeting_date, meeting_venue: form.meeting_venue, agenda_items: form.agenda_items, agenda_types: selectedAgendas },
     })
     setSaved(true)
@@ -173,7 +183,7 @@ function GenerateForm() {
     try {
       const { generatePDF } = await import('@/lib/pdf-generator')
       const fileName = `${selectedClient.company_name.replace(/[^a-z0-9]/gi, '_')}_${docType}_${form.meeting_date || 'document'}`
-      await generatePDF(output, fileName, {
+      await generatePDF(getCurrentContent(), fileName, {
         companyName: selectedClient.company_name,
         docType,
         meetingDate: form.meeting_date,
@@ -345,7 +355,36 @@ function GenerateForm() {
               <span className="text-xs text-slate-400">Generated in {genTime}</span>
               <span className="text-xs px-2 py-1 bg-green-500/20 text-green-400 rounded-lg border border-green-500/20">✓ Section 118 compliant</span>
             </div>
-            <div id="doc-output" className="p-6 max-h-[500px] overflow-y-auto doc-preview" dangerouslySetInnerHTML={{ __html: output }} />
+            {/* Toolbar */}
+            <div className="px-5 py-2 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400">
+                  {isEditing ? 'Editing — click anywhere in the document to make changes' : 'Click "Edit" to make changes before downloading'}
+                </span>
+              </div>
+              <button
+                onClick={() => setIsEditing(e => !e)}
+                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${isEditing ? 'bg-amber-50 text-amber-700 border-amber-200' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+              >
+                {isEditing ? '✓ Done editing' : '✏ Edit document'}
+              </button>
+            </div>
+
+            {/* Document — editable when isEditing */}
+            <div
+              ref={editorRef}
+              id="doc-output"
+              className={`p-6 max-h-[500px] overflow-y-auto doc-preview ${isEditing ? 'outline-none ring-2 ring-amber-200 ring-inset' : ''}`}
+              contentEditable={isEditing}
+              suppressContentEditableWarning
+              dangerouslySetInnerHTML={!isEditing ? { __html: editedOutput || output } : undefined}
+              onBlur={() => {
+                if (isEditing && editorRef.current) {
+                  setEditedOutput(editorRef.current.innerHTML)
+                }
+              }}
+            />
+
             <div className="border-t border-slate-100 px-5 py-3 flex gap-3">
               <button onClick={downloadPDF} disabled={downloading}
                 className="flex-1 py-2.5 bg-ink text-white rounded-lg text-xs font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
