@@ -86,7 +86,7 @@ export default function NewClientPage() {
         body: JSON.stringify({ cin }),
       })
       const data = await res.json()
-      if (data.error && !data.found === false) {
+      if (data.error && data.found === false) {
         setFetchOk(false)
         setFetchMsg(data.error)
         setForm(f => ({ ...f, cin }))
