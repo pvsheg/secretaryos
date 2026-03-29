@@ -1,6 +1,6 @@
 // lib/pdf-generator.ts
-// Professional PDF generation for SecretaryOS documents
-// Uses html2canvas to render HTML accurately then embeds in jsPDF
+// Professional PDF generation using jsPDF html() method
+// Handles page breaks correctly — no more text cutting through pages
 
 export async function generatePDF(
   htmlContent: string,
@@ -12,225 +12,216 @@ export async function generatePDF(
     cin: string
   }
 ): Promise<void> {
-  // Load dependencies
   await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
   await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js')
 
   const { jsPDF } = (window as any).jspdf
-  const html2canvas = (window as any).html2canvas
 
-  // Create a hidden container with proper A4 styling
-  const container = document.createElement('div')
-  container.style.cssText = `
-    position: fixed;
-    top: -9999px;
-    left: -9999px;
-    width: 794px;
-    background: white;
-    font-family: 'Times New Roman', Times, serif;
-    font-size: 12px;
-    line-height: 1.6;
-    color: #1a1a1a;
-    padding: 0;
-  `
+  // Create a temporary iframe for isolated rendering
+  const iframe = document.createElement('iframe')
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:794px;height:1123px;border:none;'
+  document.body.appendChild(iframe)
 
-  // Build the full document HTML with proper styling
-  container.innerHTML = `
-    <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { font-family: 'Times New Roman', Times, serif; }
-
-      .pdf-header {
-        background: #0A0F1E;
-        padding: 12px 40px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .pdf-header-brand { color: #B8973A; font-size: 11px; font-weight: bold; letter-spacing: 2px; font-family: Arial, sans-serif; }
-      .pdf-header-tag { color: #888; font-size: 9px; font-family: Arial, sans-serif; }
-
-      .pdf-body {
-        padding: 40px 50px;
-      }
-
-      .doc-title-main {
-        font-size: 15px;
-        font-weight: bold;
-        text-align: center;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        color: #0A0F1E;
-        margin-bottom: 6px;
-        font-family: 'Times New Roman', Times, serif;
-      }
-      .doc-center {
-        text-align: center;
-        font-size: 11px;
-        color: #333;
-        margin-bottom: 4px;
-        font-family: 'Times New Roman', Times, serif;
-      }
-      .doc-section {
-        font-size: 10px;
-        font-weight: bold;
-        text-transform: uppercase;
-        letter-spacing: 1.5px;
-        color: #B8973A;
-        margin-top: 20px;
-        margin-bottom: 6px;
-        padding-bottom: 4px;
-        border-bottom: 0.5px solid #e0e0e0;
-        font-family: Arial, sans-serif;
-      }
-      .doc-line {
-        font-size: 11.5px;
-        color: #2a2a2a;
-        margin-bottom: 5px;
-        padding-left: 12px;
-        line-height: 1.7;
-        font-family: 'Times New Roman', Times, serif;
-      }
-      .doc-resolution {
-        font-size: 11.5px;
-        color: #1a1a1a;
-        margin: 12px 0 8px 0;
-        padding: 10px 14px;
-        border-left: 3px solid #B8973A;
-        background: #FAFAF8;
-        line-height: 1.8;
-        font-family: 'Times New Roman', Times, serif;
-      }
-      .doc-further {
-        font-size: 11.5px;
-        color: #1a1a1a;
-        margin: 6px 0 8px 0;
-        padding: 8px 14px;
-        border-left: 2px solid #ccc;
-        background: #F8F8F6;
-        line-height: 1.8;
-        font-family: 'Times New Roman', Times, serif;
-      }
-      .doc-sig {
-        display: flex;
-        justify-content: space-between;
-        margin-top: 40px;
-        padding-top: 20px;
-        border-top: 0.5px solid #ddd;
-      }
-      .doc-sig-line {
-        border-top: 1px solid #333;
-        width: 160px;
-        margin-bottom: 4px;
-        display: block;
-      }
-      .doc-sig div {
-        font-size: 10.5px;
-        color: #333;
-        line-height: 1.6;
-        font-family: 'Times New Roman', Times, serif;
-      }
-      strong { font-weight: bold; }
-
-      .pdf-footer {
-        background: #F5F5F3;
-        padding: 8px 40px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-top: 0.5px solid #ddd;
-        margin-top: 20px;
-      }
-      .pdf-footer-text { font-size: 8px; color: #888; font-family: Arial, sans-serif; }
-
-      .divider {
-        border: none;
-        border-top: 0.5px solid #B8973A;
-        margin: 8px auto;
-        width: 60%;
-      }
-    </style>
-
-    <div class="pdf-header">
-      <span class="pdf-header-brand">SECRETARYOS</span>
-      <span class="pdf-header-tag">Companies Act 2013 Compliant Document</span>
-    </div>
-
-    <div class="pdf-body">
-      ${htmlContent}
-    </div>
-
-    <div class="pdf-footer">
-      <span class="pdf-footer-text">Generated by SecretaryOS · ${metadata.companyName} · ${metadata.cin}</span>
-      <span class="pdf-footer-text">${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-    </div>
-  `
-
-  document.body.appendChild(container)
-
-  try {
-    // Render to canvas
-    const canvas = await html2canvas(container, {
-      scale: 2, // High DPI for crisp text
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-    })
-
-    document.body.removeChild(container)
-
-    // A4 dimensions in mm
-    const A4_WIDTH = 210
-    const A4_HEIGHT = 297
-
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4',
-    })
-
-    const imgWidth = A4_WIDTH
-    const imgHeight = (canvas.height * A4_WIDTH) / canvas.width
-
-    let heightLeft = imgHeight
-    let position = 0
-    let pageCount = 0
-
-    // Add pages as needed
-    const imgData = canvas.toDataURL('image/png', 1.0)
-
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-    heightLeft -= A4_HEIGHT
-    pageCount++
-
-    while (heightLeft > 0) {
-      position = heightLeft - imgHeight
-      pdf.addPage()
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-      heightLeft -= A4_HEIGHT
-      pageCount++
-    }
-
-    pdf.save(`${fileName}.pdf`)
-
-  } catch (err) {
-    document.body.removeChild(container)
-    throw err
+  const doc = iframe.contentDocument!
+  doc.open()
+  doc.write(`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page {
+    size: A4;
+    margin: 0;
   }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 210mm; background: white; }
+
+  /* Page structure */
+  .page-header {
+    background: #0A0F1E;
+    padding: 10px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: running(header);
+  }
+  .page-header-brand { color: #B8973A; font-size: 10px; font-weight: bold; letter-spacing: 2px; font-family: Arial, sans-serif; }
+  .page-header-tag { color: #999; font-size: 8px; font-family: Arial, sans-serif; }
+
+  .page-content {
+    padding: 28px 45px 40px;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 11px;
+    color: #1a1a1a;
+    line-height: 1.65;
+  }
+
+  .page-footer {
+    font-size: 8px;
+    color: #999;
+    font-family: Arial, sans-serif;
+    border-top: 0.5px solid #ddd;
+    padding: 6px 45px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* Document classes */
+  .doc-title-main {
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #0A0F1E;
+    margin-bottom: 4px;
+    page-break-inside: avoid;
+    font-family: 'Times New Roman', Times, serif;
+  }
+  .doc-center {
+    text-align: center;
+    font-size: 10.5px;
+    color: #333;
+    margin-bottom: 3px;
+    page-break-inside: avoid;
+    font-family: 'Times New Roman', Times, serif;
+  }
+  .doc-section {
+    font-size: 9.5px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #B8973A;
+    margin-top: 18px;
+    margin-bottom: 5px;
+    padding-bottom: 3px;
+    border-bottom: 0.5px solid #e0e0e0;
+    font-family: Arial, sans-serif;
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+  .doc-line {
+    font-size: 11px;
+    color: #2a2a2a;
+    margin-bottom: 6px;
+    padding-left: 10px;
+    line-height: 1.7;
+    font-family: 'Times New Roman', Times, serif;
+    page-break-inside: avoid;
+  }
+  .doc-resolution {
+    font-size: 11px;
+    color: #1a1a1a;
+    margin: 10px 0 6px 0;
+    padding: 9px 12px;
+    border-left: 3px solid #B8973A;
+    background: #FAFAF8;
+    line-height: 1.75;
+    font-family: 'Times New Roman', Times, serif;
+    page-break-inside: avoid;
+  }
+  .doc-further {
+    font-size: 11px;
+    color: #1a1a1a;
+    margin: 5px 0 6px 0;
+    padding: 7px 12px;
+    border-left: 2px solid #ccc;
+    background: #F8F8F6;
+    line-height: 1.75;
+    font-family: 'Times New Roman', Times, serif;
+    page-break-inside: avoid;
+  }
+  .doc-sig {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 36px;
+    padding-top: 16px;
+    border-top: 0.5px solid #ddd;
+    page-break-inside: avoid;
+  }
+  .doc-sig-line {
+    border-top: 1px solid #333;
+    width: 150px;
+    margin-bottom: 3px;
+    display: block;
+  }
+  .doc-sig div {
+    font-size: 10px;
+    color: #333;
+    line-height: 1.6;
+    font-family: 'Times New Roman', Times, serif;
+  }
+  strong { font-weight: bold; }
+
+  /* Prevent orphan section headers at bottom of page */
+  .doc-section + .doc-line,
+  .doc-section + .doc-resolution {
+    page-break-before: avoid;
+  }
+</style>
+</head>
+<body>
+  <div class="page-header">
+    <span class="page-header-brand">SECRETARYOS</span>
+    <span class="page-header-tag">Companies Act 2013 Compliant Document</span>
+  </div>
+
+  <div class="page-content">
+    ${htmlContent}
+  </div>
+
+  <div class="page-footer">
+    <span>Generated by SecretaryOS &middot; ${metadata.companyName} &middot; ${metadata.cin}</span>
+    <span>${metadata.meetingDate}</span>
+  </div>
+</body>
+</html>`)
+  doc.close()
+
+  // Wait for fonts to load
+  await new Promise(resolve => setTimeout(resolve, 800))
+
+  const pdf = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+    compress: true,
+  })
+
+  await new Promise<void>((resolve, reject) => {
+    pdf.html(iframe.contentDocument!.body, {
+      callback: (doc: any) => {
+        document.body.removeChild(iframe)
+        doc.save(`${fileName}.pdf`)
+        resolve()
+      },
+      x: 0,
+      y: 0,
+      width: 210,
+      windowWidth: 794,
+      autoPaging: 'text',  // KEY — this avoids cutting through text
+      margin: [0, 0, 0, 0],
+      html2canvas: {
+        scale: 0.75,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        letterRendering: true,
+      },
+    })
+  }).catch(err => {
+    if (document.body.contains(iframe)) document.body.removeChild(iframe)
+    throw err
+  })
 }
 
 function loadScript(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    // Check if already loaded
-    if (document.querySelector(`script[src="${src}"]`)) {
-      resolve()
-      return
-    }
-    const script = document.createElement('script')
-    script.src = src
-    script.onload = () => resolve()
-    script.onerror = () => reject(new Error(`Failed to load ${src}`))
-    document.head.appendChild(script)
+    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return }
+    const s = document.createElement('script')
+    s.src = src
+    s.onload = () => resolve()
+    s.onerror = () => reject(new Error(`Failed to load ${src}`))
+    document.head.appendChild(s)
   })
 }

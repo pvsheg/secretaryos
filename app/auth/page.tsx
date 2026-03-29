@@ -1,143 +1,244 @@
 'use client'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import Link from 'next/link'
+import { Suspense } from 'react'
 
-export default function AuthPage() {
-  const [mode, setMode] = useState<'login' | 'signup'>('login')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [name, setName] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+function AuthForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    setSuccess('')
+  const [mode, setMode] = useState<'signin' | 'signup' | 'magic'>('signin')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const [magicSent, setMagicSent] = useState(false)
 
-    if (mode === 'login') {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) { setError(error.message); setLoading(false); return }
-      router.push('/dashboard')
-    } else {
-      const { error } = await supabase.auth.signUp({
-        email, password,
-        options: { data: { full_name: name } }
-      })
-      if (error) { setError(error.message); setLoading(false); return }
-      setSuccess('Account created! Please check your email to confirm, then sign in.')
-      setMode('login')
+  const ref = searchParams.get('ref')
+
+  useEffect(() => {
+    // Check if already logged in
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) router.push('/dashboard')
+    })
+
+    // Show error from callback
+    const err = searchParams.get('error')
+    if (err === 'verification_failed') {
+      setError('Verification link expired. Please request a new one.')
     }
+  }, [])
+
+  async function handleMagicLink() {
+    if (!email) { setError('Please enter your email address'); return }
+    setLoading(true); setError('')
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        data: ref ? { referred_by_code: ref } : {},
+      }
+    })
+    if (error) { setError(error.message); setLoading(false); return }
+    setMagicSent(true)
     setLoading(false)
   }
 
+  async function handleSignIn() {
+    if (!email || !password) { setError('Please enter email and password'); return }
+    setLoading(true); setError('')
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) {
+      setError(error.message === 'Invalid login credentials' ? 'Incorrect email or password' : error.message)
+      setLoading(false)
+      return
+    }
+    router.push('/dashboard')
+  }
+
+  async function handleSignUp() {
+    if (!email || !password) { setError('Please enter email and password'); return }
+    if (password.length < 8) { setError('Password must be at least 8 characters'); return }
+    setLoading(true); setError('')
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        data: ref ? { referred_by_code: ref } : {},
+      }
+    })
+    if (error) { setError(error.message); setLoading(false); return }
+    setMessage('Check your email to verify your account, then sign in.')
+    setLoading(false)
+  }
+
+  const inputCls = "w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-slate-400 transition-colors bg-white"
+
   return (
-    <div className="min-h-screen bg-[#FDFCF9] flex">
-      {/* LEFT PANEL */}
-      <div className="hidden lg:flex w-1/2 bg-ink flex-col justify-between p-12">
-        <div className="font-serif text-2xl font-bold text-white">
-          Secretary<span className="text-gold-light" style={{color:'#D4AF5A'}}>OS</span>
-        </div>
-        <div>
-          <p className="font-serif text-4xl font-bold text-white leading-tight mb-6">
-            Stop drafting.<br/>
-            <span className="italic" style={{color:'#D4AF5A'}}>Start practising.</span>
-          </p>
-          <p className="text-slate-400 text-lg font-light leading-relaxed mb-10">
-            AI-powered compliance documents for Indian Company Secretaries. Board minutes in under 60 seconds.
-          </p>
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              { val: '33 hrs', label: 'Saved per month' },
-              { val: '45 sec', label: 'Per document' },
-              { val: '73k+', label: 'CS professionals in India' },
-              { val: '100%', label: 'Companies Act compliant' },
-            ].map(s => (
-              <div key={s.val} className="bg-white/5 border border-white/10 rounded-xl p-4">
-                <div className="font-serif text-3xl font-bold text-white mb-1">{s.val}</div>
-                <div className="text-xs text-slate-500">{s.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <p className="text-xs text-slate-600">Built exclusively for practicing CS professionals in India</p>
-      </div>
+    <div className="min-h-screen bg-[#FDFCF9] flex flex-col items-center justify-center px-4">
+      <div className="w-full max-w-sm">
 
-      {/* RIGHT PANEL */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
-          <div className="lg:hidden font-serif text-2xl font-bold text-ink mb-8">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <Link href="/" className="font-serif text-2xl font-bold text-ink">
             Secretary<span className="text-gold">OS</span>
-          </div>
+          </Link>
+          <p className="text-slate-500 text-sm mt-1">AI compliance documents for CS professionals</p>
+        </div>
 
-          <h1 className="text-2xl font-semibold text-ink mb-2">
-            {mode === 'login' ? 'Welcome back' : 'Create your account'}
-          </h1>
-          <p className="text-slate-500 text-sm mb-8">
-            {mode === 'login'
-              ? 'Sign in to your SecretaryOS workspace'
-              : 'Get started — first 3 months free for early users'}
-          </p>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === 'signup' && (
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Full name</label>
-                <input
-                  type="text" value={name} onChange={e => setName(e.target.value)}
-                  placeholder="Priya Sharma" required
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-gold transition-colors"
-                />
-              </div>
-            )}
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Email address</label>
-              <input
-                type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="you@example.com" required
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-gold transition-colors"
-              />
+        {/* Magic link sent state */}
+        {magicSent ? (
+          <div className="bg-white border border-slate-100 rounded-2xl p-8 text-center">
+            <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-green-600 text-xl">✓</span>
             </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Password</label>
-              <input
-                type="password" value={password} onChange={e => setPassword(e.target.value)}
-                placeholder="Minimum 8 characters" required minLength={8}
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-gold transition-colors"
-              />
+            <h2 className="font-semibold text-ink mb-2">Check your email</h2>
+            <p className="text-slate-500 text-sm mb-4">
+              We sent a sign-in link to <strong>{email}</strong>. Click it to sign in instantly — no password needed.
+            </p>
+            <button
+              onClick={() => { setMagicSent(false); setMode('signin') }}
+              className="text-sm text-slate-500 hover:text-ink transition-colors"
+            >
+              ← Back to sign in
+            </button>
+          </div>
+        ) : message ? (
+          <div className="bg-white border border-slate-100 rounded-2xl p-8 text-center">
+            <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-green-600 text-xl">✓</span>
+            </div>
+            <h2 className="font-semibold text-ink mb-2">Almost there</h2>
+            <p className="text-slate-500 text-sm mb-4">{message}</p>
+            <button
+              onClick={() => { setMessage(''); setMode('signin') }}
+              className="text-sm text-slate-500 hover:text-ink transition-colors"
+            >
+              ← Back to sign in
+            </button>
+          </div>
+        ) : (
+          <div className="bg-white border border-slate-100 rounded-2xl p-8">
+
+            {/* Mode tabs */}
+            <div className="flex gap-1 bg-slate-100 rounded-lg p-1 mb-6">
+              <button
+                onClick={() => { setMode('signin'); setError('') }}
+                className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${mode === 'signin' ? 'bg-white text-ink shadow-sm' : 'text-slate-500'}`}
+              >
+                Sign in
+              </button>
+              <button
+                onClick={() => { setMode('signup'); setError('') }}
+                className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${mode === 'signup' ? 'bg-white text-ink shadow-sm' : 'text-slate-500'}`}
+              >
+                Sign up
+              </button>
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-600">{error}</div>
-            )}
-            {success && (
-              <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-green-700">{success}</div>
+              <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-sm text-red-600 mb-4">
+                {error}
+              </div>
             )}
 
-            <button
-              type="submit" disabled={loading}
-              className="w-full py-3 bg-ink text-white rounded-xl text-sm font-semibold hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
-            >
-              {loading ? 'Please wait...' : mode === 'login' ? 'Sign in' : 'Create account'}
-            </button>
-          </form>
+            {ref && (
+              <div className="bg-green-50 border border-green-100 rounded-xl p-3 text-sm text-green-700 mb-4">
+                ✓ You have been referred — 30 days free on the Growth plan after signing up
+              </div>
+            )}
 
-          <p className="text-center text-sm text-slate-500 mt-6">
-            {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
-            <button
-              onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setSuccess('') }}
-              className="text-ink font-semibold hover:underline"
-            >
-              {mode === 'login' ? 'Sign up free' : 'Sign in'}
-            </button>
-          </p>
-        </div>
+            <div className="space-y-3">
+              <div>
+                <input
+                  type="email"
+                  className={inputCls}
+                  placeholder="your@email.com"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && (mode === 'signin' ? handleSignIn() : handleSignUp())}
+                  autoComplete="email"
+                  autoFocus
+                />
+              </div>
+
+              {mode !== 'magic' && (
+                <div>
+                  <input
+                    type="password"
+                    className={inputCls}
+                    placeholder={mode === 'signup' ? 'Create password (min 8 characters)' : 'Password'}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (mode === 'signin' ? handleSignIn() : handleSignUp())}
+                    autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                  />
+                </div>
+              )}
+
+              <button
+                onClick={mode === 'signin' ? handleSignIn : mode === 'signup' ? handleSignUp : handleMagicLink}
+                disabled={loading}
+                className="w-full py-3 bg-ink text-white font-semibold rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-50 text-sm"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                    {mode === 'signin' ? 'Signing in...' : mode === 'signup' ? 'Creating account...' : 'Sending link...'}
+                  </span>
+                ) : (
+                  mode === 'signin' ? 'Sign in →' : mode === 'signup' ? 'Create account →' : 'Send magic link →'
+                )}
+              </button>
+            </div>
+
+            {/* Magic link option */}
+            <div className="mt-4 text-center">
+              {mode === 'magic' ? (
+                <button
+                  onClick={() => { setMode('signin'); setError('') }}
+                  className="text-xs text-slate-400 hover:text-ink transition-colors"
+                >
+                  ← Use password instead
+                </button>
+              ) : (
+                <button
+                  onClick={() => { setMode('magic'); setError('') }}
+                  className="text-xs text-slate-400 hover:text-ink transition-colors"
+                >
+                  Or sign in with a magic link — no password needed
+                </button>
+              )}
+            </div>
+
+          </div>
+        )}
+
+        {/* Footer */}
+        <p className="text-center text-xs text-slate-400 mt-6">
+          By signing up you agree to our{' '}
+          <Link href="/terms" className="underline">terms</Link>
+          {' '}and{' '}
+          <Link href="/privacy" className="underline">privacy policy</Link>
+        </p>
       </div>
     </div>
+  )
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#FDFCF9] flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-slate-200 border-t-ink rounded-full animate-spin"></div>
+      </div>
+    }>
+      <AuthForm />
+    </Suspense>
   )
 }
