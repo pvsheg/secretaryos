@@ -89,6 +89,7 @@ function GenerateForm() {
   const [editedOutput, setEditedOutput] = useState('')
   const editorRef = useRef<HTMLDivElement>(null)
   const [limitError, setLimitError] = useState('')
+  const [specialInstructions, setSpecialInstructions] = useState('')
 
   useEffect(() => {
     supabase.from('clients').select('*, directors(name, din, designation)').order('company_name').then(({ data }) => {
@@ -137,6 +138,7 @@ function GenerateForm() {
           paid_up_capital: selectedClient.paid_up_capital,
           compliance_category: complianceCategory,
           agenda_types: selectedAgendas,
+          special_instructions: specialInstructions,
           ...form,
         }),
       })
@@ -159,6 +161,14 @@ function GenerateForm() {
     }
     setLoading(false)
   }
+
+  // Populate editor with content when switching to edit mode
+  useEffect(() => {
+    if (isEditing && editorRef.current) {
+      editorRef.current.innerHTML = editedOutput || output
+      editorRef.current.focus()
+    }
+  }, [isEditing])
 
   function getCurrentContent() {
     if (editorRef.current) return editorRef.current.innerHTML
@@ -188,6 +198,7 @@ function GenerateForm() {
         docType,
         meetingDate: form.meeting_date,
         cin: selectedClient.cin,
+        customTemplate: (selectedClient as any).pdf_template?.typst_template || null,
       })
     } catch (err) {
       console.error('PDF generation failed:', err)
@@ -285,8 +296,15 @@ function GenerateForm() {
 
             {/* ADDITIONAL AGENDA */}
             <div>
-              <label className={labelCls}>Additional agenda / decisions <span className="text-slate-400 normal-case font-normal">(optional — add anything not in the library above)</span></label>
+              <label className={labelCls}>Additional agenda / decisions <span className="text-slate-400 normal-case font-normal">(optional)</span></label>
               <textarea className={`${inputCls} resize-none`} rows={3} value={form.agenda_items} onChange={e => setForm(f => ({ ...f, agenda_items: e.target.value }))} placeholder="Any additional agenda items or specific decisions not covered above..." />
+            </div>
+
+            {/* SPECIAL INSTRUCTIONS */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+              <label className={labelCls}>Special instructions <span className="text-slate-400 normal-case font-normal">(optional)</span></label>
+              <textarea className={`${inputCls} resize-none bg-white`} rows={3} value={specialInstructions} onChange={e => setSpecialInstructions(e.target.value)} placeholder="e.g. Include a clause about XYZ... / The dividend is ₹2 per share... / Meeting was held via video conference..." />
+              <p className="text-xs text-slate-400 mt-1.5">The AI will incorporate these instructions into the document exactly as specified.</p>
             </div>
 
             {/* MEETING DETAILS */}
@@ -377,8 +395,8 @@ function GenerateForm() {
               className={`p-6 max-h-[500px] overflow-y-auto doc-preview ${isEditing ? 'outline-none ring-2 ring-amber-200 ring-inset' : ''}`}
               contentEditable={isEditing}
               suppressContentEditableWarning
-              dangerouslySetInnerHTML={!isEditing ? { __html: editedOutput || output } : undefined}
-              onBlur={() => {
+              dangerouslySetInnerHTML={isEditing ? undefined : { __html: editedOutput || output }}
+              onInput={() => {
                 if (isEditing && editorRef.current) {
                   setEditedOutput(editorRef.current.innerHTML)
                 }

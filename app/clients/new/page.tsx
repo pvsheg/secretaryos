@@ -37,6 +37,7 @@ export default function NewClientPage() {
   const [nameResults, setNameResults] = useState<MCAResult[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
   const searchTimer = useRef<NodeJS.Timeout>()
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   const [form, setForm] = useState({
     // Core
@@ -74,9 +75,20 @@ export default function NewClientPage() {
         setNameResults(data.results || [])
       } catch { setNameResults([]) }
       setSearchLoading(false)
-    }, 400)
+    }, 250)
   }, [nameSearch])
 
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setNameResults([])
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
   function selectFromSearch(result: MCAResult) {
     setCinInput(result.cin)
     setNameSearch('')
@@ -224,7 +236,7 @@ export default function NewClientPage() {
 
           <div className="relative mb-3">
             <label className={labelCls}>Search by company name</label>
-            <input className={inputCls} value={nameSearch} onChange={e => setNameSearch(e.target.value)} placeholder="Type company name..." />
+            <input className={inputCls} value={nameSearch} onChange={e => setNameSearch(e.target.value)} onKeyDown={e => e.key === 'Escape' && setNameResults([])} placeholder="Type company name..." />
             {searchLoading && (
               <div className="absolute right-3 top-9">
                 <span className="w-4 h-4 border-2 border-slate-300 border-t-ink rounded-full animate-spin inline-block"></span>

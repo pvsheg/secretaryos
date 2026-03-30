@@ -2,12 +2,12 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
-import type { Client, Director, Document } from '@/types'
+import TemplateUpload from '@/components/TemplateUpload'
 
 export default async function ClientDetailPage({ params }: { params: { id: string } }) {
   const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth')
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) redirect('/auth')
 
   const [{ data: client }, { data: documents }] = await Promise.all([
     supabase.from('clients').select('*, directors(*)').eq('id', params.id).single(),
@@ -16,7 +16,8 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
 
   if (!client) notFound()
 
-  const directors: Director[] = (client as Client & { directors: Director[] }).directors || []
+  const directors = (client as any).directors || []
+  const hasTemplate = !!(client as any).pdf_template_uploaded_at
 
   return (
     <div className="min-h-screen bg-[#FDFCF9]">
@@ -36,7 +37,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
             </div>
             <div>
               <h1 className="font-serif text-3xl font-bold text-ink">{client.company_name}</h1>
-              <p className="text-slate-500 text-sm">CIN: {client.cin}</p>
+              <p className="text-slate-500 text-sm font-mono">CIN: {client.cin}</p>
             </div>
           </div>
           <Link href={`/generate?client=${client.id}`}
@@ -47,16 +48,22 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
 
         <div className="grid lg:grid-cols-3 gap-6">
 
-          {/* COMPANY DETAILS */}
+          {/* LEFT SIDEBAR */}
           <div className="space-y-4">
+
+            {/* COMPANY DETAILS */}
             <div className="bg-white border border-slate-100 rounded-2xl p-5">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4">Company details</p>
               <div className="space-y-3">
                 {[
                   { label: 'Registered office', val: client.registered_office },
+                  { label: 'Company type', val: (client as any).company_type || 'Not set' },
+                  { label: 'Company status', val: (client as any).company_status || 'Active' },
                   { label: 'Financial year end', val: client.financial_year_end },
                   { label: 'Authorised capital', val: client.authorised_capital || 'Not set' },
                   { label: 'Paid-up capital', val: client.paid_up_capital || 'Not set' },
+                  { label: 'ROC code', val: (client as any).roc_code || 'Not set' },
+                  { label: 'Listing status', val: (client as any).listing_status || 'Unlisted' },
                   { label: 'Documents generated', val: documents?.length || 0 },
                 ].map(item => (
                   <div key={item.label}>
@@ -76,7 +83,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                 <p className="text-sm text-slate-400">No directors on record</p>
               ) : (
                 <div className="space-y-3">
-                  {directors.map((dir) => (
+                  {directors.map((dir: any) => (
                     <div key={dir.id} className="flex items-start gap-3">
                       <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-xs font-bold text-slate-600 flex-shrink-0 mt-0.5">
                         {dir.name.charAt(0)}
@@ -91,27 +98,38 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                 </div>
               )}
             </div>
+
+            {/* PDF TEMPLATE UPLOAD */}
+            <TemplateUpload
+              clientId={client.id}
+              hasTemplate={hasTemplate}
+              uploadedAt={(client as any).pdf_template_uploaded_at}
+            />
+
           </div>
 
           {/* DOCUMENTS */}
           <div className="lg:col-span-2">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-semibold text-ink">Documents</h2>
-              <Link href={`/generate?client=${client.id}`} className="text-xs text-slate-500 hover:text-ink">Generate new →</Link>
+              <Link href={`/generate?client=${client.id}`} className="text-xs text-slate-500 hover:text-ink">
+                Generate new →
+              </Link>
             </div>
 
             {!documents?.length ? (
               <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center">
                 <div className="text-3xl mb-2">📄</div>
-                <p className="font-semibold text-ink mb-1 text-sm">No documents yet for this client</p>
+                <p className="font-semibold text-ink mb-1 text-sm">No documents yet</p>
                 <p className="text-xs text-slate-500 mb-4">Generate your first board minutes document</p>
-                <Link href={`/generate?client=${client.id}`} className="inline-flex items-center gap-2 px-4 py-2 bg-ink text-white text-xs font-medium rounded-lg">
+                <Link href={`/generate?client=${client.id}`}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-ink text-white text-xs font-medium rounded-lg">
                   Generate now →
                 </Link>
               </div>
             ) : (
               <div className="space-y-3">
-                {(documents as Document[]).map((doc) => (
+                {documents.map((doc: any) => (
                   <Link key={doc.id} href={`/documents/${doc.id}`}
                     className="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-2xl hover:border-slate-200 transition-colors">
                     <div className="w-9 h-9 bg-slate-100 rounded-xl flex items-center justify-center text-base flex-shrink-0">
