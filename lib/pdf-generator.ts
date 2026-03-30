@@ -1,6 +1,5 @@
 // lib/pdf-generator.ts
 // Calls server-side /api/pdf which uses Typst for perfect PDF generation
-// Falls back to puppeteer if typst is not available
 
 export interface PDFMetadata {
   companyName: string
@@ -12,7 +11,7 @@ export interface PDFMetadata {
   chairmanDin?: string
   csName?: string
   csMembership?: string
-  customTemplate?: string | null  // Typst template from client's uploaded PDF
+  customTemplate?: string | null
 }
 
 export async function generatePDF(
@@ -45,11 +44,29 @@ export async function generatePDF(
 
   const blob = await res.blob()
   const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${fileName}.pdf`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+
+  // Detect iOS / Safari — they block programmatic clicks on blob URLs
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+
+  if (isIOS || isSafari) {
+    // On iOS/Safari — open in new tab, user can share/save from there
+    const newTab = window.open(url, '_blank')
+    if (!newTab) {
+      // Popup blocked — fallback to direct navigation
+      window.location.href = url
+    }
+    // Clean up after a delay
+    setTimeout(() => URL.revokeObjectURL(url), 10000)
+  } else {
+    // Standard download for Chrome, Firefox, desktop
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${fileName}.pdf`
+    a.style.display = 'none'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
 }
