@@ -1,24 +1,21 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-
   experimental: {
-    serverActions: { allowedOrigins: ['localhost:3000'] }
+    serverActions: { allowedOrigins: ['localhost:3000'] },
+    // Tell Next.js to include the typst binary and template files in the bundle
+    outputFileTracingIncludes: {
+      '/api/pdf': [
+        './bin/**',
+        './lib/typst/**',
+      ],
+    },
   },
 
-  // Cache static assets aggressively
   async headers() {
     return [
       {
         source: '/(.*)',
-        headers: [
-          { key: 'X-DNS-Prefetch-Control', value: 'on' },
-        ],
-      },
-      {
-        source: '/static/(.*)',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
+        headers: [{ key: 'X-DNS-Prefetch-Control', value: 'on' }],
       },
     ]
   },

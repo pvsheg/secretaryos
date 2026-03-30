@@ -1,14 +1,17 @@
 #!/bin/bash
-# Download Typst binary during Vercel build
-# Installs to /usr/local/bin so it is on PATH at runtime
+# Install Typst binary into ./bin/ — this gets bundled into Vercel deployment
+# via outputFileTracingIncludes in next.config.js
 
 set -e
 
 TYPST_VERSION="v0.13.1"
+PROJ_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+TYPST_BIN="${PROJ_ROOT}/bin/typst"
 
-# Check if already installed anywhere
-if command -v typst &>/dev/null; then
-  echo "Typst already on PATH: $(typst --version)"
+mkdir -p "${PROJ_ROOT}/bin"
+
+if [ -f "${TYPST_BIN}" ]; then
+  echo "Typst already installed: $(${TYPST_BIN} --version)"
   exit 0
 fi
 
@@ -23,7 +26,7 @@ else
 fi
 
 URL="https://github.com/typst/typst/releases/download/${TYPST_VERSION}/typst-${ARCH_STR}.tar.xz"
-echo "Downloading Typst ${TYPST_VERSION}..."
+echo "Downloading Typst ${TYPST_VERSION} for ${ARCH_STR}..."
 
 curl -fsSL "${URL}" | tar -xJ -C /tmp
 
@@ -33,14 +36,7 @@ if [ -z "${BINARY}" ]; then
   exit 1
 fi
 
-# Try /usr/local/bin first, fall back to project bin/
-if cp "${BINARY}" /usr/local/bin/typst 2>/dev/null; then
-  chmod +x /usr/local/bin/typst
-  echo "Typst installed to /usr/local/bin: $(typst --version)"
-else
-  mkdir -p "$(dirname "$0")/../bin"
-  PROJ_BIN="$(cd "$(dirname "$0")/.." && pwd)/bin/typst"
-  cp "${BINARY}" "${PROJ_BIN}"
-  chmod +x "${PROJ_BIN}"
-  echo "Typst installed to ${PROJ_BIN}: $(${PROJ_BIN} --version)"
-fi
+cp "${BINARY}" "${TYPST_BIN}"
+chmod +x "${TYPST_BIN}"
+echo "Typst installed: $(${TYPST_BIN} --version)"
+echo "Binary location: ${TYPST_BIN}"
