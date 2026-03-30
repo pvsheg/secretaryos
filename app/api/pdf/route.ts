@@ -117,12 +117,18 @@ export async function POST(req: NextRequest) {
         cwd: workDir,
       })
     } catch (err: any) {
-      const stderr = err.stderr?.toString() || err.message
-      console.error('Typst compilation error:', stderr)
-      console.error('Typst source (first 1000 chars):\n', typstContent.slice(0, 1000))
+      const stderr = err.stderr?.toString() || ''
+      const stdout = err.stdout?.toString() || ''
+      console.error('=== TYPST ERROR ===')
+      console.error('stderr:', stderr)
+      console.error('stdout:', stdout)
+      console.error('typst bin:', typstBin)
+      console.error('workDir:', workDir)
+      console.error('=== TYPST SOURCE ===')
+      console.error(typstContent)
       cleanup(workDir)
       return NextResponse.json(
-        { error: 'Document compilation failed. Our team has been notified.' },
+        { error: 'Typst error: ' + (stderr || stdout || err.message).slice(0, 500) },
         { status: 500 }
       )
     }
