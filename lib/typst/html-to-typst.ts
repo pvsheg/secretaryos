@@ -126,11 +126,11 @@ function htmlToTypstInline(html: string): string {
   // Convert inline HTML to Typst
   return html
     // Bold
-    .replace(/<strong>(.*?)<\/strong>/gis, '*$1*')
-    .replace(/<b>(.*?)<\/b>/gis, '*$1*')
+    .replace(/<strong>(.*?)<\/strong>/gi, '*$1*')
+    .replace(/<b>(.*?)<\/b>/gi, '*$1*')
     // Italic
-    .replace(/<em>(.*?)<\/em>/gis, '_$1_')
-    .replace(/<i>(.*?)<\/i>/gis, '_$1_')
+    .replace(/<em>(.*?)<\/em>/gi, '_$1_')
+    .replace(/<i>(.*?)<\/i>/gi, '_$1_')
     // Line breaks
     .replace(/<br\s*\/?>/gi, ' \\\n')
     // Strip remaining tags
