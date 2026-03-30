@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
               media_type: 'application/pdf',
               data: base64,
             },
-          },
+          } as any,
           {
             type: 'text',
             text: `Analyse this board minutes / legal document PDF and extract its structural template.
