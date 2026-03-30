@@ -1,10 +1,6 @@
 /** @type {import('next').NextConfig} */
-const path = require('path')
-
 const nextConfig = {
-  env: {
-    TYPST_BINARY_PATH: path.join(process.cwd(), 'bin', 'typst'),
-  },
+
   experimental: {
     serverActions: { allowedOrigins: ['localhost:3000'] }
   },

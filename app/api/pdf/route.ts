@@ -9,7 +9,30 @@ import { htmlToTypst } from '@/lib/typst/html-to-typst'
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-const TYPST_BINARY = process.env.TYPST_BINARY_PATH || join(process.cwd(), 'bin', 'typst')
+// Find typst binary — check multiple locations
+function findTypstBinary(): string {
+  const { execSync } = require('child_process')
+  const candidates = [
+    process.env.TYPST_BINARY_PATH,
+    '/usr/local/bin/typst',
+    join(process.cwd(), 'bin', 'typst'),
+    '/tmp/typst',
+    'typst', // system PATH
+  ].filter(Boolean) as string[]
+
+  for (const candidate of candidates) {
+    try {
+      if (candidate === 'typst') {
+        execSync('typst --version', { stdio: 'pipe' })
+        return 'typst'
+      }
+      if (existsSync(candidate)) return candidate
+    } catch {}
+  }
+  return candidates[0] || 'typst'
+}
+
+const TYPST_BINARY = findTypstBinary()
 const TEMPLATE_DIR = join(process.cwd(), 'lib', 'typst')
 
 export async function POST(req: NextRequest) {
@@ -68,13 +91,20 @@ export async function POST(req: NextRequest) {
     const outputFile = join(workDir, 'document.pdf')
     writeFileSync(typstFile, typstContent, 'utf-8')
 
-    // Verify typst binary exists
-    if (!existsSync(TYPST_BINARY)) {
-      cleanup(workDir)
-      return NextResponse.json(
-        { error: 'Typst binary not found. Please redeploy to install it.' },
-        { status: 500 }
-      )
+    // Verify typst binary works
+    try {
+      execSync(`"${TYPST_BINARY}" --version`, { stdio: 'pipe' })
+    } catch {
+      // Try finding it again at runtime
+      try {
+        execSync('typst --version', { stdio: 'pipe' })
+      } catch {
+        cleanup(workDir)
+        return NextResponse.json(
+          { error: 'Typst binary not available. Please redeploy.' },
+          { status: 500 }
+        )
+      }
     }
 
     // Compile with Typst
