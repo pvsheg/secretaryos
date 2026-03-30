@@ -26,17 +26,5 @@ const nextConfig = {
       },
     ]
   },
-
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      config.externals = [
-        ...(config.externals || []),
-        '@sparticuz/chromium',
-        'puppeteer-core',
-        'puppeteer',
-      ]
-    }
-    return config
-  },
 }
 module.exports = nextConfig

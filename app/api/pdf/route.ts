@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFileSync, readFileSync, unlinkSync, existsSync, mkdirSync, copyFileSync } from 'fs'
+import { writeFileSync, readFileSync, existsSync, mkdirSync, copyFileSync } from 'fs'
 import { execSync } from 'child_process'
 import { join } from 'path'
 import { tmpdir } from 'os'
@@ -9,8 +9,7 @@ import { htmlToTypst } from '@/lib/typst/html-to-typst'
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-// Path to typst binary — bundled with the app
-const TYPST_BINARY = process.env.TYPST_BINARY_PATH || 'typst'
+const TYPST_BINARY = process.env.TYPST_BINARY_PATH || join(process.cwd(), 'bin', 'typst')
 const TEMPLATE_DIR = join(process.cwd(), 'lib', 'typst')
 
 export async function POST(req: NextRequest) {
@@ -29,7 +28,7 @@ export async function POST(req: NextRequest) {
       chairmanDin,
       csName,
       csMembership,
-      customTemplate, // optional: user's custom typst template
+      customTemplate,
     } = await req.json()
 
     if (!html) {
@@ -39,18 +38,21 @@ export async function POST(req: NextRequest) {
     // Create isolated work directory
     mkdirSync(workDir, { recursive: true })
 
-    // Copy template files to work directory
-    copyFileSync(
-      join(TEMPLATE_DIR, 'template.typ'),
-      join(workDir, 'template.typ')
-    )
-
-    // If user has a custom template, use it instead
+    // Copy or write template
+    const templateDest = join(workDir, 'template.typ')
     if (customTemplate) {
-      writeFileSync(join(workDir, 'template.typ'), customTemplate, 'utf-8')
+      writeFileSync(templateDest, customTemplate, 'utf-8')
+    } else {
+      const templateSrc = join(TEMPLATE_DIR, 'template.typ')
+      if (existsSync(templateSrc)) {
+        copyFileSync(templateSrc, templateDest)
+      } else {
+        // Write inline default template if file not found
+        writeFileSync(templateDest, getDefaultTemplate(), 'utf-8')
+      }
     }
 
-    // Convert HTML to Typst markup
+    // Convert HTML to Typst
     const typstContent = htmlToTypst(html, {
       company_name: companyName || '',
       cin: cin || '',
@@ -62,14 +64,22 @@ export async function POST(req: NextRequest) {
       cs_membership: csMembership || '',
     })
 
-    // Write the Typst source file
     const typstFile = join(workDir, 'document.typ')
     const outputFile = join(workDir, 'document.pdf')
     writeFileSync(typstFile, typstContent, 'utf-8')
 
+    // Verify typst binary exists
+    if (!existsSync(TYPST_BINARY)) {
+      cleanup(workDir)
+      return NextResponse.json(
+        { error: 'Typst binary not found. Please redeploy to install it.' },
+        { status: 500 }
+      )
+    }
+
     // Compile with Typst
     try {
-      execSync(`${TYPST_BINARY} compile "${typstFile}" "${outputFile}"`, {
+      execSync(`"${TYPST_BINARY}" compile "${typstFile}" "${outputFile}"`, {
         timeout: 30000,
         stdio: 'pipe',
         cwd: workDir,
@@ -77,19 +87,20 @@ export async function POST(req: NextRequest) {
     } catch (err: any) {
       const stderr = err.stderr?.toString() || err.message
       console.error('Typst compilation error:', stderr)
-
-      // Fallback to puppeteer if typst fails
-      return fallbackPuppeteer(html, fileName, companyName, cin, meetingDate)
+      console.error('Typst source:', typstContent.slice(0, 500))
+      cleanup(workDir)
+      return NextResponse.json(
+        { error: 'Document compilation failed: ' + stderr.slice(0, 200) },
+        { status: 500 }
+      )
     }
 
-    // Read the generated PDF
     if (!existsSync(outputFile)) {
-      return fallbackPuppeteer(html, fileName, companyName, cin, meetingDate)
+      cleanup(workDir)
+      return NextResponse.json({ error: 'PDF output not generated' }, { status: 500 })
     }
 
     const pdfBuffer = readFileSync(outputFile)
-
-    // Cleanup
     cleanup(workDir)
 
     return new NextResponse(new Uint8Array(pdfBuffer), {
@@ -103,17 +114,10 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     cleanup(workDir)
     console.error('PDF generation error:', error)
-
-    // Always fallback rather than returning an error to the user
-    try {
-      const body = await req.clone().json()
-      return fallbackPuppeteer(body.html, body.fileName, body.companyName, body.cin, body.meetingDate)
-    } catch {
-      return NextResponse.json(
-        { error: error.message || 'PDF generation failed' },
-        { status: 500 }
-      )
-    }
+    return NextResponse.json(
+      { error: error.message || 'PDF generation failed' },
+      { status: 500 }
+    )
   }
 }
 
@@ -123,79 +127,46 @@ function cleanup(dir: string) {
   } catch {}
 }
 
-// Fallback: puppeteer-based PDF if typst is not available
-async function fallbackPuppeteer(
-  html: string,
-  fileName: string,
-  companyName: string,
-  cin: string,
-  meetingDate: string
-): Promise<NextResponse> {
-  try {
-    const chromium = require('@sparticuz/chromium')
-    const puppeteer = require('puppeteer-core')
-
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
-      headless: true,
-    })
-
-    const page = await browser.newPage()
-    await page.setContent(buildFallbackHtml(html, companyName, cin, meetingDate), {
-      waitUntil: 'networkidle0'
-    })
-
-    const pdf = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: { top: '0', right: '0', bottom: '0', left: '0' },
-    })
-
-    await browser.close()
-
-    return new NextResponse(new Uint8Array(Buffer.from(pdf)), {
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${fileName || 'document'}.pdf"`,
-      },
-    })
-  } catch (err: any) {
-    return NextResponse.json({ error: 'PDF generation failed: ' + err.message }, { status: 500 })
-  }
+function getDefaultTemplate(): string {
+  return `
+#let doc(company_name: "", cin: "", meeting_date: "", body) = {
+  set page(
+    paper: "a4",
+    margin: (top: 2.8cm, bottom: 2.5cm, left: 2.5cm, right: 2.5cm),
+    header: [
+      #grid(columns: (1fr, 1fr),
+        [#set text(size: 8pt, weight: "bold", fill: rgb("#B8973A"), tracking: 2pt); SECRETARYOS],
+        align(right)[#set text(size: 8pt, fill: rgb("#888888")); Companies Act 2013 Compliant]
+      )
+      #line(length: 100%, stroke: 0.5pt + rgb("#0A0F1E"))
+    ],
+    footer: [
+      #line(length: 100%, stroke: 0.5pt + rgb("#dddddd"))
+      #v(3pt)
+      #grid(columns: (1fr, 1fr),
+        [#set text(size: 7pt, fill: rgb("#999999")); Generated by SecretaryOS · #company_name · #cin],
+        align(right)[#set text(size: 7pt, fill: rgb("#999999")); #meeting_date · Page #counter(page).display()]
+      )
+    ]
+  )
+  set text(font: ("Times New Roman", "Liberation Serif"), size: 11pt, lang: "en")
+  set par(justify: true, leading: 0.8em)
+  body
 }
 
-function buildFallbackHtml(content: string, companyName: string, cin: string, meetingDate: string) {
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
-<style>
-  @page { size: A4; margin: 0; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { width: 210mm; font-family: 'Times New Roman', serif; font-size: 11pt; color: #1a1a1a; }
-  .doc-header { background: #0A0F1E; padding: 10px 40px; display: flex; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; }
-  .doc-header-brand { color: #B8973A; font-size: 10pt; font-weight: bold; letter-spacing: 2px; font-family: Arial; }
-  .doc-header-tag { color: #888; font-size: 8pt; font-family: Arial; }
-  .doc-footer { position: fixed; bottom: 0; left: 0; right: 0; background: #F8F8F6; border-top: 0.5px solid #ddd; padding: 5px 40px; display: flex; justify-content: space-between; font-size: 7.5pt; color: #999; font-family: Arial; }
-  .doc-body { margin-top: 46px; margin-bottom: 32px; padding: 28px 42px 20px; }
-  .doc-title-main { font-size: 13.5pt; font-weight: bold; text-align: center; text-transform: uppercase; color: #0A0F1E; margin-bottom: 5px; }
-  .doc-center { text-align: center; font-size: 10pt; color: #333; margin-bottom: 3px; }
-  .doc-section { font-size: 9pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1.5px; color: #B8973A; margin-top: 18pt; margin-bottom: 5pt; padding-bottom: 3pt; border-bottom: 0.5px solid #e0e0e0; font-family: Arial; page-break-after: avoid; }
-  .doc-line { font-size: 10.5pt; color: #2a2a2a; margin-bottom: 6pt; padding-left: 10px; line-height: 1.7; page-break-inside: avoid; }
-  .doc-resolution { font-size: 10.5pt; margin: 10pt 0 6pt; padding: 9pt 12px; border-left: 3px solid #B8973A; background: #FAFAF8; line-height: 1.75; page-break-inside: avoid; }
-  .doc-further { font-size: 10.5pt; margin: 5pt 0 6pt; padding: 7pt 12px; border-left: 2px solid #ccc; background: #F8F8F6; line-height: 1.75; page-break-inside: avoid; }
-  .doc-sig { display: flex; justify-content: space-between; margin-top: 36pt; padding-top: 16pt; border-top: 0.5px solid #ddd; page-break-inside: avoid; }
-  .doc-sig-line { border-top: 1px solid #333; width: 150px; margin-bottom: 4px; display: block; }
-  .doc-sig div { font-size: 9.5pt; color: #333; line-height: 1.7; }
-  strong { font-weight: bold; }
-</style></head><body>
-  <div class="doc-header">
-    <span class="doc-header-brand">SECRETARYOS</span>
-    <span class="doc-header-tag">Companies Act 2013 Compliant Document</span>
-  </div>
-  <div class="doc-footer">
-    <span>Generated by SecretaryOS · ${companyName} · ${cin}</span>
-    <span>${meetingDate}</span>
-  </div>
-  <div class="doc-body">${content}</div>
-</body></html>`
+#let doc-title(content) = { set align(center); set text(size: 14pt, weight: "bold"); upper(content); v(4pt) }
+#let doc-center(content) = { set align(center); set text(size: 10pt); content; v(2pt) }
+#let doc-divider() = { v(4pt); align(center, line(length: 50%, stroke: 0.5pt + rgb("#B8973A"))); v(4pt) }
+#let doc-section(content) = { v(14pt); set text(size: 9pt, weight: "bold", fill: rgb("#B8973A"), tracking: 1.5pt); upper(content); v(2pt); line(length: 100%, stroke: 0.5pt + rgb("#e0e0e0")); v(4pt) }
+#let doc-line(content) = { pad(left: 10pt)[#set text(size: 10.5pt); #content]; v(4pt) }
+#let doc-resolution(content) = { v(6pt); block(width: 100%, fill: rgb("#FAFAF8"), stroke: (left: 3pt + rgb("#B8973A")), inset: (left: 12pt, right: 12pt, top: 8pt, bottom: 8pt))[#set text(size: 10.5pt); #content]; v(4pt) }
+#let doc-further(content) = { v(3pt); block(width: 100%, fill: rgb("#F8F8F6"), stroke: (left: 2pt + rgb("#cccccc")), inset: (left: 12pt, right: 12pt, top: 6pt, bottom: 6pt))[#set text(size: 10.5pt); #content]; v(4pt) }
+#let doc-sig(chairman_name: "", chairman_din: "", cs_name: "", cs_membership: "", date: "", place: "") = {
+  v(24pt); line(length: 100%, stroke: 0.5pt + rgb("#dddddd")); v(12pt)
+  grid(columns: (1fr, 1fr), gutter: 20pt,
+    [#set text(size: 9.5pt); *CHAIRMAN OF THE MEETING* #v(24pt) #line(length: 80%, stroke: 0.5pt + black) #v(3pt) Name: #chairman_name \\ DIN: #chairman_din \\ Date: #date \\ Place: #place],
+    [#set text(size: 9.5pt); *COMPANY SECRETARY* #v(24pt) #line(length: 80%, stroke: 0.5pt + black) #v(3pt) Name: #cs_name \\ Membership No.: #cs_membership \\ Date: #date \\ Place: #place]
+  )
+}
+`.trim()
 }
