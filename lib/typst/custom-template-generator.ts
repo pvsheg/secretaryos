@@ -39,7 +39,7 @@ export function generateCustomTypstTemplate(templateAnalysis: {
       )
       #line(length: 100%, stroke: 0.5pt + rgb("#0A0F1E"))
     ],
-    footer: [
+    footer: context [
       #line(length: 100%, stroke: 0.5pt + rgb("#dddddd"))
       #v(3pt)
       #set text(size: 7.5pt, fill: rgb("#999999"))
