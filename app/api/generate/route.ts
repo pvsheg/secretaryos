@@ -163,39 +163,10 @@ export async function POST(req: NextRequest) {
       compliance_category,
       company_class,
       authorised_capital, paid_up_capital,
-      user_plan = 'free',
       special_instructions = '',
       client_id,
       pdf_template,
     } = body
-
-    // ── RATE LIMITING — monthly limit per plan ────────────────────────
-    if (!isAdmin) {
-      const monthLimit = PLAN_LIMITS[user_plan] ?? PLAN_LIMITS.free
-
-      // Count documents generated this calendar month
-      const startOfMonth = new Date()
-      startOfMonth.setDate(1)
-      startOfMonth.setHours(0, 0, 0, 0)
-
-      const { count } = await supabase
-        .from('generation_usage')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .gte('created_at', startOfMonth.toISOString())
-
-      if ((count ?? 0) >= monthLimit) {
-        return NextResponse.json(
-          {
-            error: `Monthly limit reached. Your ${user_plan} plan includes ${monthLimit} documents per month. Upgrade to generate more.`,
-            limit_reached: true,
-            monthly_count: count,
-            monthly_limit: monthLimit,
-          },
-          { status: 429 }
-        )
-      }
-    }
 
     const formattedDate = meeting_date
       ? new Date(meeting_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -218,7 +189,9 @@ export async function POST(req: NextRequest) {
     }
     const agendaContext = _parts.join('\n\n') || 'No specific agenda provided'
 
-    // ── CACHE CHECK — return cached doc if same inputs ────────────────
+    // ── CACHE CHECK (before limit) — cached responses don't burn quota ─
+    // Cache key is deterministic on inputs, so the same document never
+    // regenerates even if the user is at their limit.
     const inputHash = createHash('sha256')
       .update(`${user.id}-${cin}-${meeting_date}-${doc_type}-${agenda_types.sort().join('-')}-${agenda_items || ''}`)
       .digest('hex')
@@ -235,6 +208,56 @@ export async function POST(req: NextRequest) {
     if (cached?.content) {
       console.log('Cache hit — returning cached document')
       return NextResponse.json({ content: cached.content, cached: true })
+    }
+
+    // ── RATE LIMITING ─────────────────────────────────────────────────
+    // Fetch the plan from DB — never trust the client to send their own plan.
+    if (!isAdmin) {
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('plan, monthly_doc_limit')
+        .eq('user_id', user.id)
+        .single()
+
+      const plan = subscription?.plan || 'free'
+      const planLimit = subscription?.monthly_doc_limit ?? PLAN_LIMITS[plan] ?? PLAN_LIMITS.free
+
+      // Free plan: hard all-time cap (3 total, not per month).
+      // Paid plans: monthly rolling window.
+      let usageCount: number | null = 0
+      if (plan === 'free') {
+        const { count } = await supabase
+          .from('generation_usage')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+        usageCount = count
+      } else {
+        const startOfMonth = new Date()
+        startOfMonth.setDate(1)
+        startOfMonth.setHours(0, 0, 0, 0)
+        const { count } = await supabase
+          .from('generation_usage')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .gte('created_at', startOfMonth.toISOString())
+        usageCount = count
+      }
+
+      if ((usageCount ?? 0) >= planLimit) {
+        const message = plan === 'free'
+          ? `You have used all ${planLimit} free document generations. Upgrade to continue generating documents.`
+          : `Monthly limit reached. Your ${plan} plan includes ${planLimit} documents per month. Upgrade for more.`
+        return NextResponse.json(
+          {
+            error: message,
+            limit_reached: true,
+            usage_count: usageCount,
+            limit: planLimit,
+            plan,
+          },
+          { status: 429 }
+        )
+      }
     }
 
     // ── SMART TOKEN LIMIT — scale with complexity ─────────────────────

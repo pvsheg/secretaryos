@@ -335,9 +335,13 @@ function GenerateForm() {
               <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
                 <span className="text-red-500 flex-shrink-0">⚠️</span>
                 <div>
-                  <p className="text-sm font-semibold text-red-700 mb-1">Demo limit reached</p>
+                  <p className="text-sm font-semibold text-red-700 mb-1">Generation limit reached</p>
                   <p className="text-xs text-red-600">{limitError}</p>
-                  <p className="text-xs text-red-500 mt-2">Want full access? <a href="mailto:pvsheg@gmail.com" className="underline font-medium">Contact us</a></p>
+                  <p className="text-xs text-red-500 mt-2">
+                    <Link href="/pricing" className="underline font-medium">View plans →</Link>
+                    {' '}or{' '}
+                    <a href="mailto:pvsheg@gmail.com" className="underline font-medium">contact us</a>
+                  </p>
                 </div>
               </div>
             )}
