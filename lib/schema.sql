@@ -95,6 +95,8 @@ create table if not exists generation_usage (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users(id) on delete cascade not null,
   doc_type text not null,
+  model_used text,
+  tokens_used integer,
   created_at timestamptz default now() not null
 );
 
@@ -109,11 +111,6 @@ create policy "Users can insert own usage" on generation_usage
 create index if not exists generation_usage_user_doc_idx
   on generation_usage(user_id, doc_type);
 
--- Atomic rate limiting: unique constraint ensures the INSERT itself is the lock.
--- First generation succeeds; second INSERT raises a unique violation (code 23505) → 429.
--- If you have existing duplicate rows from before this constraint, run this cleanup first:
---   DELETE FROM generation_usage a USING generation_usage b
---   WHERE a.id > b.id AND a.user_id = b.user_id AND a.doc_type = b.doc_type;
-alter table generation_usage
-  add constraint if not exists generation_usage_user_doc_unique
-  unique (user_id, doc_type);
+-- Index for fast rate-limit queries (user + time range)
+create index if not exists generation_usage_user_created_idx
+  on generation_usage(user_id, created_at desc);

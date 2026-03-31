@@ -313,12 +313,13 @@ ${special_instructions ? '\nSPECIAL INSTRUCTIONS (incorporate these exactly as s
     content = content.replace(/```html|```/g, '').trim()
 
     // Log usage for rate limiting
-    await supabase.from('generation_usage').insert({
+    const { error: usageErr } = await supabase.from('generation_usage').insert({
       user_id: user.id,
       doc_type,
       model_used: model,
       tokens_used: message.usage.input_tokens + message.usage.output_tokens,
     })
+    if (usageErr) console.error('Failed to log generation usage:', usageErr.message)
 
     return NextResponse.json({
       content,

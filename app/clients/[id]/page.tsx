@@ -40,10 +40,16 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
               <p className="text-slate-500 text-sm font-mono">CIN: {client.cin}</p>
             </div>
           </div>
-          <Link href={`/generate?client=${client.id}`}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-ink text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-colors w-full sm:w-auto sm:flex-shrink-0">
-            ✦ Generate document
-          </Link>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Link href={`/clients/${client.id}/edit`}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-200 text-ink text-sm font-semibold rounded-xl hover:bg-slate-50 transition-colors flex-shrink-0">
+              Edit
+            </Link>
+            <Link href={`/generate?client=${client.id}`}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-ink text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-colors flex-1 sm:flex-initial">
+              ✦ Generate document
+            </Link>
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">

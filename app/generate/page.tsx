@@ -92,6 +92,25 @@ function GenerateForm() {
   const [specialInstructions, setSpecialInstructions] = useState('')
   const [inputHash, setInputHash] = useState('')
   const outputRef = useRef<HTMLDivElement>(null)
+  const [usageInfo, setUsageInfo] = useState<{ plan: string; used: number; limit: number } | null>(null)
+
+  async function fetchUsage() {
+    const startOfMonth = new Date()
+    startOfMonth.setDate(1)
+    startOfMonth.setHours(0, 0, 0, 0)
+
+    const [{ data: sub }, { count: allTimeCount }, { count: monthlyCount }] = await Promise.all([
+      supabase.from('subscriptions').select('plan, monthly_doc_limit').single(),
+      supabase.from('generation_usage').select('id', { count: 'exact', head: true }),
+      supabase.from('generation_usage').select('id', { count: 'exact', head: true })
+        .gte('created_at', startOfMonth.toISOString()),
+    ])
+
+    const plan = sub?.plan || 'free'
+    const limit = sub?.monthly_doc_limit || 3
+    const used = plan === 'free' ? (allTimeCount ?? 0) : (monthlyCount ?? 0)
+    setUsageInfo({ plan, used, limit })
+  }
 
   useEffect(() => {
     supabase.from('clients').select('*, directors(name, din, designation)').order('company_name').then(({ data }) => {
@@ -104,6 +123,7 @@ function GenerateForm() {
         }
       }
     })
+    fetchUsage()
   }, [])
 
   function selectClient(c: Client) {
@@ -154,6 +174,7 @@ function GenerateForm() {
         setEditedOutput(data.content)
         setInputHash(data.input_hash || '')
         setIsEditing(false)
+        if (!data.cached) fetchUsage()
         // On mobile the output panel is below the form — scroll it into view
         setTimeout(() => {
           if (window.innerWidth < 1024) {
@@ -221,10 +242,45 @@ function GenerateForm() {
 
   const currentAgendas = complianceCategory ? AGENDA_LIBRARY[complianceCategory] || {} : {}
 
+  const usagePct = usageInfo ? Math.min(100, Math.round((usageInfo.used / usageInfo.limit) * 100)) : 0
+  const usageAtLimit = usageInfo ? usageInfo.used >= usageInfo.limit : false
+
   return (
     <div className="grid lg:grid-cols-2 gap-8 mt-8">
       {/* LEFT FORM */}
       <div className="space-y-5">
+        {/* USAGE INDICATOR */}
+        {usageInfo && (
+          <div className={`flex items-center justify-between gap-4 px-4 py-3 rounded-xl border ${usageAtLimit ? 'bg-red-50 border-red-200' : 'bg-white border-slate-100'}`}>
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="min-w-0">
+                <p className={`text-xs font-semibold ${usageAtLimit ? 'text-red-700' : 'text-slate-600'}`}>
+                  {usageInfo.used} / {usageInfo.limit} generations used
+                  <span className="font-normal text-slate-400 ml-1">
+                    {usageInfo.plan === 'free' ? '(all time)' : 'this month'}
+                  </span>
+                </p>
+                <div className="w-32 h-1 bg-slate-100 rounded-full overflow-hidden mt-1.5">
+                  <div
+                    className={`h-full rounded-full transition-all ${usageAtLimit ? 'bg-red-400' : usagePct > 80 ? 'bg-amber-400' : 'bg-teal'}`}
+                    style={{ width: `${usagePct}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <Link href="/documents" className="text-xs text-slate-400 hover:text-ink transition-colors whitespace-nowrap">
+                View history →
+              </Link>
+              {usageInfo.plan === 'free' && (
+                <Link href="/pricing" className="text-xs font-semibold text-teal hover:text-teal-dark transition-colors whitespace-nowrap">
+                  Upgrade
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* DOC TYPE */}
         <div>
           <p className={labelCls}>Document type</p>
