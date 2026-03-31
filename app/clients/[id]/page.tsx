@@ -30,18 +30,18 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
           <span className="text-ink">{client.company_name}</span>
         </div>
 
-        <div className="flex items-start justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-ink rounded-2xl flex items-center justify-center text-white text-2xl font-bold">
+            <div className="w-14 h-14 bg-ink rounded-2xl flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
               {client.company_name.charAt(0)}
             </div>
-            <div>
-              <h1 className="font-serif text-3xl font-bold text-ink">{client.company_name}</h1>
+            <div className="min-w-0">
+              <h1 className="font-serif text-2xl sm:text-3xl font-bold text-ink">{client.company_name}</h1>
               <p className="text-slate-500 text-sm font-mono">CIN: {client.cin}</p>
             </div>
           </div>
           <Link href={`/generate?client=${client.id}`}
-            className="flex items-center gap-2 px-5 py-2.5 bg-ink text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-colors">
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-ink text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-colors w-full sm:w-auto sm:flex-shrink-0">
             ✦ Generate document
           </Link>
         </div>

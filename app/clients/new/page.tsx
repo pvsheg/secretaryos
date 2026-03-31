@@ -262,11 +262,11 @@ export default function NewClientPage() {
             <div className="flex-1 h-px bg-slate-100"></div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <input className={`${inputCls} flex-1 font-mono uppercase`} value={cinInput}
               onChange={e => setCinInput(e.target.value.toUpperCase())} placeholder="U72900KA2019PTC112345" maxLength={21} />
             <button type="button" onClick={fetchFromMCA} disabled={fetching}
-              className="px-5 py-2.5 bg-ink text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-50 flex-shrink-0 flex items-center gap-2">
+              className="px-5 py-2.5 bg-ink text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-50 sm:flex-shrink-0 flex items-center justify-center gap-2">
               {fetching ? <><span className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin"></span>Fetching...</> : '↓ Fetch all data'}
             </button>
           </div>
@@ -291,7 +291,7 @@ export default function NewClientPage() {
                 <label className={labelCls}>Company name *</label>
                 <input className={inputCls} value={form.company_name} onChange={e => updateForm('company_name', e.target.value)} placeholder="Acme Technologies Private Limited" required />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className={labelCls}>CIN *</label>
                   <input className={`${inputCls} font-mono uppercase`} value={form.cin} onChange={e => updateForm('cin', e.target.value.toUpperCase())} placeholder="U72900KA2019PTC112345" required maxLength={21} />
@@ -305,7 +305,7 @@ export default function NewClientPage() {
                 <label className={labelCls}>Registered office address *</label>
                 <textarea className={`${inputCls} resize-none`} rows={2} value={form.registered_office} onChange={e => updateForm('registered_office', e.target.value)} placeholder="4th Floor, Prestige Tower, MG Road, Bengaluru — 560001" required />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className={labelCls}>State</label>
                   <input className={readonlyCls} value={form.state_code} readOnly placeholder="Auto from CIN" />
@@ -324,7 +324,7 @@ export default function NewClientPage() {
               <span className="w-6 h-6 bg-ink text-white rounded-full flex items-center justify-center text-xs">2</span>
               Company classification
             </h2>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className={labelCls}>Company class</label>
                 <input className={readonlyCls} value={form.company_type} readOnly placeholder="Private / Public / OPC" />
@@ -341,7 +341,7 @@ export default function NewClientPage() {
                 <label className={labelCls}>Listing status</label>
                 <input className={readonlyCls} value={form.listing_status} readOnly placeholder="Listed / Unlisted" />
               </div>
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <label className={labelCls}>Industrial classification (NIC)</label>
                 <input className={readonlyCls} value={form.industrial_classification} readOnly placeholder="Auto from MCA" />
               </div>
@@ -354,7 +354,7 @@ export default function NewClientPage() {
               <span className="w-6 h-6 bg-ink text-white rounded-full flex items-center justify-center text-xs">3</span>
               Capital structure
             </h2>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid sm:grid-cols-3 gap-4">
               <div>
                 <label className={labelCls}>Financial year end</label>
                 <select className={inputCls} value={form.financial_year_end} onChange={e => updateForm('financial_year_end', e.target.value)}>
@@ -391,7 +391,7 @@ export default function NewClientPage() {
               <span className="w-6 h-6 bg-ink text-white rounded-full flex items-center justify-center text-xs">4</span>
               Status
             </h2>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className={labelCls}>Company status</label>
                 <select className={inputCls} value={form.company_status} onChange={e => updateForm('company_status', e.target.value)}>
@@ -428,7 +428,7 @@ export default function NewClientPage() {
                       <button type="button" onClick={() => removeDirector(idx)} className="text-xs text-red-400 hover:text-red-600">Remove</button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid sm:grid-cols-2 gap-3">
                     <div>
                       <label className={labelCls}>Full name *</label>
                       <input className={inputCls} value={dir.name} onChange={e => updateDirector(idx, 'name', e.target.value)} placeholder="Anil Kumar Sharma" />

@@ -21,12 +21,12 @@ export default async function ClientsPage() {
     <div className="min-h-screen bg-[#FDFCF9]">
       <Navbar />
       <main className="pt-24 pb-16 px-6 max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="font-serif text-3xl font-bold text-ink">Client companies</h1>
+        <div className="flex items-center justify-between gap-3 mb-8">
+          <div className="min-w-0">
+            <h1 className="font-serif text-2xl sm:text-3xl font-bold text-ink">Client companies</h1>
             <p className="text-slate-500 text-sm mt-1">{clients?.length || 0} companies on record</p>
           </div>
-          <Link href="/clients/new" className="flex items-center gap-2 px-5 py-2.5 bg-ink text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-colors">
+          <Link href="/clients/new" className="flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-ink text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-colors flex-shrink-0">
             + Add client
           </Link>
         </div>

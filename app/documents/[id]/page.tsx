@@ -76,7 +76,7 @@ export default function DocumentPage() {
         </div>
 
         {/* Header */}
-        <div className="flex items-start justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
@@ -97,7 +97,7 @@ export default function DocumentPage() {
           <button
             onClick={downloadPDF}
             disabled={downloading}
-            className="flex items-center gap-2 px-5 py-2.5 bg-ink text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-ink text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto sm:flex-shrink-0"
           >
             {downloading ? (
               <><span className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin inline-block"></span>Generating...</>
@@ -114,14 +114,14 @@ export default function DocumentPage() {
             </span>
           </div>
           <div
-            className="p-8 doc-preview"
+            className="p-4 sm:p-8 doc-preview"
             dangerouslySetInnerHTML={{ __html: doc.content }}
           />
         </div>
 
         {/* Back to client */}
         {doc.clients && (
-          <div className="mt-6 flex justify-between items-center">
+          <div className="mt-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
             <Link
               href={`/clients/${doc.clients.id}`}
               className="text-sm text-slate-500 hover:text-ink transition-colors"

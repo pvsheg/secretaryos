@@ -32,12 +32,12 @@ export default async function DocumentsPage() {
     <div className="min-h-screen bg-[#FDFCF9]">
       <Navbar />
       <main className="pt-24 pb-16 px-6 max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="font-serif text-3xl font-bold text-ink">Documents</h1>
+        <div className="flex items-center justify-between gap-3 mb-8">
+          <div className="min-w-0">
+            <h1 className="font-serif text-2xl sm:text-3xl font-bold text-ink">Documents</h1>
             <p className="text-slate-500 text-sm mt-1">{documents?.length || 0} documents generated</p>
           </div>
-          <Link href="/generate" className="flex items-center gap-2 px-5 py-2.5 bg-ink text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-colors">
+          <Link href="/generate" className="flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-ink text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-colors flex-shrink-0">
             ✦ Generate new
           </Link>
         </div>
@@ -63,11 +63,11 @@ export default async function DocumentsPage() {
                   <div className="font-semibold text-sm text-ink truncate">{doc.title}</div>
                   <div className="text-xs text-slate-500 mt-0.5">{doc.clients?.company_name}</div>
                 </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <span className={`text-xs px-2 py-1 rounded-lg border font-medium ${TYPE_COLORS[doc.type]}`}>
+                <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                  <span className={`hidden sm:inline text-xs px-2 py-1 rounded-lg border font-medium ${TYPE_COLORS[doc.type]}`}>
                     {TYPE_LABELS[doc.type]}
                   </span>
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-slate-400 whitespace-nowrap">
                     {new Date(doc.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </span>
                   <span className="text-slate-300">→</span>

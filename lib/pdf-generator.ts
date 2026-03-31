@@ -19,25 +19,48 @@ export async function generatePDF(
   fileName: string,
   metadata: PDFMetadata
 ): Promise<void> {
-  const res = await fetch('/api/pdf', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      html: htmlContent,
-      fileName,
-      companyName: metadata.companyName,
-      cin: metadata.cin,
-      meetingDate: metadata.meetingDate,
-      place: metadata.place || 'India',
-      chairmanName: metadata.chairmanName,
-      chairmanDin: metadata.chairmanDin,
-      csName: metadata.csName,
-      csMembership: metadata.csMembership,
-      customTemplate: metadata.customTemplate || null,
-    }),
-  })
+  // Detect iOS / Safari — they block programmatic clicks on blob URLs.
+  // Note: iPads on iOS 13+ report as Macintosh, so check maxTouchPoints too.
+  const isIOS =
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1)
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+
+  // On iOS/Safari, open a blank window BEFORE the async fetch.
+  // Popup blockers only allow window.open() called directly from a user gesture;
+  // opening after an await causes it to be blocked. We pre-open here (synchronously),
+  // then point it at the blob URL once the fetch completes.
+  let iosWindow: Window | null = null
+  if (isIOS || isSafari) {
+    iosWindow = window.open('', '_blank')
+  }
+
+  let res: Response
+  try {
+    res = await fetch('/api/pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        html: htmlContent,
+        fileName,
+        companyName: metadata.companyName,
+        cin: metadata.cin,
+        meetingDate: metadata.meetingDate,
+        place: metadata.place || 'India',
+        chairmanName: metadata.chairmanName,
+        chairmanDin: metadata.chairmanDin,
+        csName: metadata.csName,
+        csMembership: metadata.csMembership,
+        customTemplate: metadata.customTemplate || null,
+      }),
+    })
+  } catch (err) {
+    iosWindow?.close()
+    throw err
+  }
 
   if (!res.ok) {
+    iosWindow?.close()
     const err = await res.json().catch(() => ({ error: 'PDF generation failed' }))
     throw new Error(err.error || 'PDF generation failed')
   }
@@ -45,18 +68,14 @@ export async function generatePDF(
   const blob = await res.blob()
   const url = URL.createObjectURL(blob)
 
-  // Detect iOS / Safari — they block programmatic clicks on blob URLs
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
-
   if (isIOS || isSafari) {
-    // On iOS/Safari — open in new tab, user can share/save from there
-    const newTab = window.open(url, '_blank')
-    if (!newTab) {
-      // Popup blocked — fallback to direct navigation
+    if (iosWindow) {
+      // Point the already-open (non-blocked) window at the blob URL
+      iosWindow.location.href = url
+    } else {
+      // window.open was blocked — fall back to same-tab navigation
       window.location.href = url
     }
-    // Clean up after a delay
     setTimeout(() => URL.revokeObjectURL(url), 10000)
   } else {
     // Standard download for Chrome, Firefox, desktop

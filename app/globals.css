@@ -28,3 +28,9 @@ body {
 .doc-preview .doc-resolution strong { font-weight: 700; }
 .doc-preview .doc-sig { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 24px; font-size: 12px; color: #64748b; }
 .doc-preview .doc-sig-line { border-top: 1px solid #94a3b8; padding-top: 6px; margin-bottom: 4px; }
+
+/* Mobile overrides */
+@media (max-width: 480px) {
+  .doc-preview .doc-sig { grid-template-columns: 1fr; gap: 24px; }
+  .doc-preview h1 { font-size: 13px; }
+}

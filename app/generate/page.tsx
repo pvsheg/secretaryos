@@ -90,6 +90,7 @@ function GenerateForm() {
   const editorRef = useRef<HTMLDivElement>(null)
   const [limitError, setLimitError] = useState('')
   const [specialInstructions, setSpecialInstructions] = useState('')
+  const outputRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     supabase.from('clients').select('*, directors(name, din, designation)').order('company_name').then(({ data }) => {
@@ -151,6 +152,12 @@ function GenerateForm() {
         setOutput(data.content)
         setEditedOutput(data.content)
         setIsEditing(false)
+        // On mobile the output panel is below the form — scroll it into view
+        setTimeout(() => {
+          if (window.innerWidth < 1024) {
+            outputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }
+        }, 100)
         const tmp = document.createElement('div')
         tmp.innerHTML = data.content
         setRawText(tmp.innerText || tmp.textContent || '')
@@ -346,7 +353,7 @@ function GenerateForm() {
       </div>
 
       {/* RIGHT OUTPUT */}
-      <div className="sticky top-24">
+      <div ref={outputRef} className="lg:sticky top-24">
         {loading && (
           <div className="bg-white border border-slate-100 rounded-2xl p-10 text-center">
             <div className="w-12 h-12 border-2 border-slate-200 border-t-ink rounded-full animate-spin mx-auto mb-6"></div>
