@@ -315,7 +315,7 @@ function GenerateForm() {
             </div>
 
             {/* MEETING DETAILS */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid sm:grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>Meeting date *</label>
                 <input type="date" className={inputCls} value={form.meeting_date} onChange={e => setForm(f => ({ ...f, meeting_date: e.target.value }))} required />

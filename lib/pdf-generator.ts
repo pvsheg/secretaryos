@@ -19,19 +19,26 @@ export async function generatePDF(
   fileName: string,
   metadata: PDFMetadata
 ): Promise<void> {
-  // Detect iOS / Safari — they block programmatic clicks on blob URLs.
-  // Note: iPads on iOS 13+ report as Macintosh, so check maxTouchPoints too.
+  // Detect device type
   const isIOS =
     /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1)
   const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+  const isMobile = isIOS || /Android/i.test(navigator.userAgent)
 
-  // On iOS/Safari, open a blank window BEFORE the async fetch.
-  // Popup blockers only allow window.open() called directly from a user gesture;
-  // opening after an await causes it to be blocked. We pre-open here (synchronously),
-  // then point it at the blob URL once the fetch completes.
+  // Check if the browser supports the Web Share API with files.
+  // On mobile (iOS 15+, Android Chrome 89+) this opens the native share/save sheet —
+  // the best UX for saving a file on mobile.
+  const testFile = new File(['x'], 'test.pdf', { type: 'application/pdf' })
+  const canShareFiles =
+    isMobile &&
+    typeof navigator.canShare === 'function' &&
+    navigator.canShare({ files: [testFile] })
+
+  // For iOS/Safari WITHOUT the share API, pre-open a blank window NOW (synchronously,
+  // while still in the user-gesture context) so popup blockers don't interfere.
   let iosWindow: Window | null = null
-  if (isIOS || isSafari) {
+  if ((isIOS || isSafari) && !canShareFiles) {
     iosWindow = window.open('', '_blank')
   }
 
@@ -66,26 +73,38 @@ export async function generatePDF(
   }
 
   const blob = await res.blob()
+
+  // ── Mobile: Web Share API (native save sheet) ──────────────────────────────
+  if (canShareFiles) {
+    const file = new File([blob], `${fileName}.pdf`, { type: 'application/pdf' })
+    try {
+      await navigator.share({ files: [file], title: fileName })
+      return
+    } catch {
+      // User cancelled or share failed — fall through to blob-URL fallback
+    }
+  }
+
+  // ── iOS / Safari: open pre-opened window at the blob URL ──────────────────
   const url = URL.createObjectURL(blob)
 
   if (isIOS || isSafari) {
     if (iosWindow) {
-      // Point the already-open (non-blocked) window at the blob URL
       iosWindow.location.href = url
     } else {
-      // window.open was blocked — fall back to same-tab navigation
-      window.location.href = url
+      window.open(url, '_blank') || (window.location.href = url)
     }
-    setTimeout(() => URL.revokeObjectURL(url), 10000)
-  } else {
-    // Standard download for Chrome, Firefox, desktop
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${fileName}.pdf`
-    a.style.display = 'none'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+    return
   }
+
+  // ── Desktop / Android Chrome: standard anchor download ────────────────────
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${fileName}.pdf`
+  a.style.display = 'none'
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }

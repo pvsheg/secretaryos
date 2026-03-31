@@ -8,13 +8,14 @@ export default async function DashboardPage() {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) redirect('/auth')
 
-  const [{ data: clients }, { data: documents }, { data: subscription }, { data: usage }] = await Promise.all([
+  const [{ data: clients }, { data: documents }, { data: subscription }, { data: usage }, { count: totalDocs }] = await Promise.all([
     supabase.from('clients').select('id, company_name').order('created_at', { ascending: false }),
     supabase.from('documents').select('id, title, type, created_at, clients(company_name)').order('created_at', { ascending: false }).limit(5),
     supabase.from('subscriptions').select('*').eq('user_id', session.user.id).single(),
     supabase.from('generation_usage').select('id', { count: 'exact', head: true })
       .eq('user_id', session.user.id)
       .gte('created_at', new Date(new Date().setDate(1)).toISOString()),
+    supabase.from('documents').select('id', { count: 'exact', head: true }),
   ])
 
   const hour = new Date().getHours()
@@ -78,12 +79,10 @@ export default async function DashboardPage() {
         </div>
 
         {/* STATS */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-10">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-10">
           {[
             { label: 'Total clients', val: clients?.length || 0, icon: '🏢', color: 'bg-blue-50 border-blue-100' },
-            { label: 'Documents generated', val: docsUsed, icon: '📄', color: 'bg-green-50 border-green-100' },
-            { label: 'Hours saved (est.)', val: `${((docsUsed) * 1.5).toFixed(0)}h`, icon: '⏱️', color: 'bg-amber-50 border-amber-100' },
-            { label: 'Compliance score', val: '100%', icon: '✅', color: 'bg-emerald-50 border-emerald-100' },
+            { label: 'Documents generated', val: totalDocs || 0, icon: '📄', color: 'bg-green-50 border-green-100' },
           ].map(s => (
             <div key={s.label} className={`border rounded-2xl p-4 sm:p-5 ${s.color}`}>
               <div className="text-xl sm:text-2xl mb-2 sm:mb-3">{s.icon}</div>
