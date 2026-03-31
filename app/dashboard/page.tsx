@@ -19,14 +19,20 @@ export default async function DashboardPage() {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) redirect('/auth')
 
-  const [{ data: clients }, { data: documents }, { data: subscription }, { data: usage }, { count: totalDocs }] = await Promise.all([
+  const startOfMonth = new Date()
+  startOfMonth.setDate(1)
+  startOfMonth.setHours(0, 0, 0, 0)
+
+  const [{ data: clients }, { data: documents }, { data: subscription }, { count: monthlyUsageCount }, { count: totalDocs }, { count: allTimeUsageCount }] = await Promise.all([
     supabase.from('clients').select('id, company_name').order('created_at', { ascending: false }),
     supabase.from('documents').select('id, title, type, created_at, clients(company_name)').order('created_at', { ascending: false }).limit(6),
     supabase.from('subscriptions').select('*').eq('user_id', session.user.id).single(),
     supabase.from('generation_usage').select('id', { count: 'exact', head: true })
       .eq('user_id', session.user.id)
-      .gte('created_at', new Date(new Date().setDate(1)).toISOString()),
+      .gte('created_at', startOfMonth.toISOString()),
     supabase.from('documents').select('id', { count: 'exact', head: true }),
+    supabase.from('generation_usage').select('id', { count: 'exact', head: true })
+      .eq('user_id', session.user.id),
   ])
 
   const hour = new Date().getHours()
@@ -36,7 +42,9 @@ export default async function DashboardPage() {
 
   const plan = subscription?.plan || 'free'
   const planLimit = subscription?.monthly_doc_limit || 3
-  const docsUsed = (usage as any)?.count || 0
+  const docsUsed = plan === 'free'
+    ? (allTimeUsageCount ?? 0)
+    : (monthlyUsageCount ?? 0)
   const docsLeft = Math.max(0, planLimit - docsUsed)
   const usagePct = Math.min(100, Math.round((docsUsed / planLimit) * 100))
 

@@ -90,6 +90,7 @@ function GenerateForm() {
   const editorRef = useRef<HTMLDivElement>(null)
   const [limitError, setLimitError] = useState('')
   const [specialInstructions, setSpecialInstructions] = useState('')
+  const [inputHash, setInputHash] = useState('')
   const outputRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -109,7 +110,7 @@ function GenerateForm() {
     setSelectedClient(c)
     const dirStr = c.directors?.map(d => `${d.name} — DIN ${d.din}, ${d.designation}`).join('\n') || ''
     setForm(f => ({ ...f, directors_present: dirStr, meeting_venue: `Registered office, ${c.registered_office.split(',').pop()?.trim() || ''}` }))
-    setOutput(''); setRawText(''); setSaved(false)
+    setOutput(''); setRawText(''); setSaved(false); setInputHash('')
   }
 
   function toggleAgenda(key: string) {
@@ -151,6 +152,7 @@ function GenerateForm() {
       } else if (data.content) {
         setOutput(data.content)
         setEditedOutput(data.content)
+        setInputHash(data.input_hash || '')
         setIsEditing(false)
         // On mobile the output panel is below the form — scroll it into view
         setTimeout(() => {
@@ -189,6 +191,7 @@ function GenerateForm() {
     const title = `${selectedClient.company_name} — ${DOC_TYPES.find(d => d.id === docType)?.label} — ${form.meeting_date}`
     await supabase.from('documents').insert({
       client_id: selectedClient.id, user_id: session.user.id, type: docType, title, content: getCurrentContent(),
+      input_hash: inputHash || null,
       metadata: { meeting_date: form.meeting_date, meeting_venue: form.meeting_venue, agenda_items: form.agenda_items, agenda_types: selectedAgendas },
     })
     setSaved(true)

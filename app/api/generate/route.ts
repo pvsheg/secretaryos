@@ -193,7 +193,7 @@ export async function POST(req: NextRequest) {
     // Cache key is deterministic on inputs, so the same document never
     // regenerates even if the user is at their limit.
     const inputHash = createHash('sha256')
-      .update(`${user.id}-${cin}-${meeting_date}-${doc_type}-${agenda_types.sort().join('-')}-${agenda_items || ''}`)
+      .update(`${user.id}-${cin}-${meeting_date}-${doc_type}-${[...agenda_types].sort().join('-')}-${agenda_items || ''}-${special_instructions || ''}`)
       .digest('hex')
 
     const { data: cached } = await supabase
@@ -322,6 +322,7 @@ ${special_instructions ? '\nSPECIAL INSTRUCTIONS (incorporate these exactly as s
 
     return NextResponse.json({
       content,
+      input_hash: inputHash,
       cached: false,
       model_used: model,
       tokens: message.usage,
