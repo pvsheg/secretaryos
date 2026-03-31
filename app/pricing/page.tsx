@@ -5,17 +5,39 @@ import Link from 'next/link'
 
 const plans = [
   {
+    id: 'free',
+    name: 'Free',
+    price: 0,
+    founding: 0,
+    tagline: 'Try SecretaryOS',
+    docs: '3',
+    docsLabel: 'document generations',
+    features: [
+      'All document types',
+      'MCA auto-fetch via CIN',
+      '30 agenda types',
+      'PDF download',
+    ],
+    missing: [
+      'More than 3 generations',
+      'Custom templates',
+      'Priority support',
+    ],
+    cta: 'Start free',
+    ctaHref: '/auth',
+  },
+  {
     id: 'starter',
     name: 'Starter',
     price: 2999,
     founding: 1499,
-    period: 'month',
     tagline: 'Solo CS — up to 10 clients',
-    docs: 50,
+    docs: '50',
+    docsLabel: 'documents / month',
     features: [
       'Up to 10 client companies',
       '50 documents per month',
-      'Board minutes, AGM notices, ROC filings',
+      'All document types',
       'MCA auto-fetch via CIN',
       '30 agenda types',
       'PDF download',
@@ -24,19 +46,19 @@ const plans = [
     missing: [
       '100+ agenda types',
       'Statutory registers',
-      'MCA sync (Probe42)',
       'White-label reports',
     ],
-    color: 'slate',
+    cta: 'Get founding rate',
+    ctaHref: '/auth',
   },
   {
     id: 'growth',
     name: 'Growth',
     price: 5999,
     founding: 2999,
-    period: 'month',
     tagline: 'Solo CS — unlimited clients',
-    docs: 200,
+    docs: '200',
+    docsLabel: 'documents / month',
     featured: true,
     features: [
       'Unlimited client companies',
@@ -51,16 +73,17 @@ const plans = [
       'Priority support',
     ],
     missing: [],
-    color: 'blue',
+    cta: 'Get founding rate',
+    ctaHref: '/auth',
   },
   {
     id: 'firm',
     name: 'Firm',
     price: 14999,
     founding: 7499,
-    period: 'month',
-    tagline: 'CS firm — 5 team seats',
-    docs: 500,
+    tagline: 'CS firm — 5 seats',
+    docs: '500',
+    docsLabel: 'documents / month',
     features: [
       'Everything in Growth',
       '5 team member seats',
@@ -73,14 +96,15 @@ const plans = [
       'Dedicated account manager',
     ],
     missing: [],
-    color: 'slate',
+    cta: 'Get founding rate',
+    ctaHref: '/auth',
   },
 ]
 
 const faqs = [
   {
-    q: 'What happens when I hit my monthly document limit?',
-    a: 'You will be notified when you are close to your limit. You can purchase additional documents at ₹5 each (Starter), ₹3 each (Growth), or ₹2 each (Firm). Or upgrade your plan instantly.',
+    q: 'What counts as a "document generation"?',
+    a: 'Each time you click Generate and the AI creates a new document, that counts as one generation. Viewing or downloading a document you already generated does not count.',
   },
   {
     q: 'What is the founding member rate?',
@@ -92,7 +116,7 @@ const faqs = [
   },
   {
     q: 'Is my data safe?',
-    a: 'Your client data and documents are stored securely on Supabase (AWS Mumbai region) with row-level security — meaning only you can see your data. We never share your client information with anyone.',
+    a: 'Your client data and documents are stored on Supabase (AWS Mumbai region) with row-level security — only you can see your data. We never share your client information.',
   },
   {
     q: 'Do you offer annual billing?',
@@ -101,170 +125,176 @@ const faqs = [
 ]
 
 export default function PricingPage() {
-  const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly')
   const [showFounding, setShowFounding] = useState(true)
+  const [openFaq, setOpenFaq] = useState<number | null>(null)
 
   return (
-    <div className="min-h-screen bg-[#FDFCF9]">
+    <div className="min-h-screen bg-app-bg">
       <Navbar />
-      <main className="pt-24 pb-16 px-6 max-w-5xl mx-auto">
+      <main className="pt-24 pb-16 px-4 sm:px-6 max-w-6xl mx-auto">
 
         {/* Header */}
-        <div className="text-center mb-10">
+        <div className="text-center mb-10 fade-in-1">
           <h1 className="font-serif text-4xl font-bold text-ink mb-3">Simple, transparent pricing</h1>
-          <p className="text-slate-500 text-lg mb-6">Built for practicing Company Secretaries in India. No hidden fees.</p>
-
-          {/* Billing toggle */}
-          <div className="inline-flex items-center gap-3 bg-slate-100 rounded-full p-1">
-            <button
-              onClick={() => setBilling('monthly')}
-              className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${billing === 'monthly' ? 'bg-white text-ink shadow-sm' : 'text-slate-500'}`}
-            >
-              Monthly
-            </button>
-            <button
-              onClick={() => setBilling('annual')}
-              className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${billing === 'annual' ? 'bg-white text-ink shadow-sm' : 'text-slate-500'}`}
-            >
-              Annual
-              <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">2 months free</span>
-            </button>
-          </div>
+          <p className="text-gray-500 text-lg">Built for practicing Company Secretaries in India. No hidden fees.</p>
         </div>
 
         {/* Founding member banner */}
         {showFounding && (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-8 flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-8 fade-in-2 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0"></div>
+              <div>
                 <span className="text-sm font-semibold text-amber-800">Founding member pricing — first 50 customers only</span>
+                <p className="text-xs text-amber-700 mt-0.5">Lock in 50% off forever. Rate never increases as long as you stay subscribed.</p>
               </div>
-              <p className="text-sm text-amber-700">Lock in 50% off forever. This rate never increases as long as you stay subscribed.</p>
             </div>
-            <button onClick={() => setShowFounding(false)} className="text-amber-400 hover:text-amber-600 ml-4 flex-shrink-0">✕</button>
+            <button onClick={() => setShowFounding(false)} className="text-amber-400 hover:text-amber-600 flex-shrink-0 text-lg">✕</button>
           </div>
         )}
 
-        {/* Plans */}
-        <div className="grid grid-cols-3 gap-5 mb-12">
+        {/* Plans grid */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12 fade-in-3">
           {plans.map(plan => {
-            const price = showFounding ? plan.founding : (billing === 'annual' ? Math.round(plan.price * 10 / 12) : plan.price)
-            const annualTotal = showFounding ? plan.founding * 10 : plan.price * 10
+            const displayPrice = plan.price === 0 ? 0 : (showFounding ? plan.founding : plan.price)
 
             return (
-              <div
-                key={plan.id}
-                className={`rounded-2xl p-6 border flex flex-col ${plan.featured ? 'border-2 border-blue-400 bg-white' : 'border border-slate-100 bg-white'}`}
-              >
+              <div key={plan.id} className={`bg-white rounded-lg flex flex-col relative ${
+                plan.featured
+                  ? 'border-2 border-teal shadow-card'
+                  : 'border border-gray-200'
+              }`}>
                 {plan.featured && (
-                  <div className="text-xs font-semibold bg-blue-50 text-blue-700 px-3 py-1 rounded-full self-start mb-3 border border-blue-100">
-                    Most popular
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="bg-teal text-white text-xs font-semibold px-3 py-1 rounded-full whitespace-nowrap">
+                      Most popular
+                    </span>
                   </div>
                 )}
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">{plan.name}</div>
-                <div className="flex items-baseline gap-1 mb-1">
-                  <span className="text-3xl font-semibold text-ink">₹{price.toLocaleString('en-IN')}</span>
-                  <span className="text-slate-400 text-sm">/month</span>
-                </div>
-                {showFounding && (
-                  <div className="text-xs text-slate-400 line-through mb-1">₹{plan.price.toLocaleString('en-IN')}/month regular</div>
-                )}
-                {billing === 'annual' && (
-                  <div className="text-xs text-green-600 mb-1">₹{annualTotal.toLocaleString('en-IN')}/year — 2 months free</div>
-                )}
-                <div className="text-xs text-slate-500 mb-4">{plan.tagline}</div>
-                <div className="text-xs text-slate-500 mb-4 pb-4 border-b border-slate-100">
-                  {plan.docs} documents/month
-                </div>
 
-                <div className="space-y-2.5 flex-1 mb-6">
-                  {plan.features.map(f => (
-                    <div key={f} className="flex items-start gap-2 text-xs text-slate-700">
-                      <span className="text-green-500 flex-shrink-0 mt-0.5">✓</span>
-                      {f}
+                <div className="p-5 flex-1 flex flex-col">
+                  {/* Plan name + price */}
+                  <div className="mb-4">
+                    <div className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">{plan.name}</div>
+                    <div className="flex items-baseline gap-1 mb-1">
+                      {plan.price === 0 ? (
+                        <span className="text-3xl font-bold text-ink">Free</span>
+                      ) : (
+                        <>
+                          <span className="text-3xl font-bold text-ink">₹{displayPrice.toLocaleString('en-IN')}</span>
+                          <span className="text-gray-400 text-sm">/mo</span>
+                        </>
+                      )}
                     </div>
-                  ))}
-                  {plan.missing.map(f => (
-                    <div key={f} className="flex items-start gap-2 text-xs text-slate-400">
-                      <span className="flex-shrink-0 mt-0.5">–</span>
-                      {f}
-                    </div>
-                  ))}
-                </div>
+                    {showFounding && plan.price > 0 && (
+                      <div className="text-xs text-gray-400 line-through">₹{plan.price.toLocaleString('en-IN')}/mo regular</div>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">{plan.tagline}</p>
+                  </div>
 
-                <Link
-                  href="/auth"
-                  className={`w-full py-2.5 text-center text-sm font-semibold rounded-xl transition-colors ${plan.featured ? 'bg-ink text-white hover:bg-slate-800' : 'border border-slate-200 text-ink hover:bg-slate-50'}`}
-                >
-                  {showFounding ? 'Get founding rate →' : 'Get started →'}
-                </Link>
+                  {/* Docs count */}
+                  <div className="mb-4 pb-4 border-b border-gray-100">
+                    <span className="font-serif text-2xl font-semibold text-ink">{plan.docs}</span>
+                    <span className="text-xs text-gray-400 ml-1">{plan.docsLabel}</span>
+                  </div>
+
+                  {/* Features */}
+                  <div className="space-y-2 flex-1 mb-5">
+                    {plan.features.map(f => (
+                      <div key={f} className="flex items-start gap-2 text-xs text-gray-600">
+                        <span className="text-teal flex-shrink-0 mt-0.5 font-bold">✓</span>
+                        {f}
+                      </div>
+                    ))}
+                    {plan.missing.map(f => (
+                      <div key={f} className="flex items-start gap-2 text-xs text-gray-300">
+                        <span className="flex-shrink-0 mt-0.5">–</span>
+                        {f}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* CTA */}
+                  <Link href={plan.ctaHref}
+                    className={`w-full py-2.5 text-center text-sm font-semibold rounded-lg transition-all ${
+                      plan.featured
+                        ? 'bg-teal text-white hover:bg-teal-dark shadow-sm hover:shadow-card active:scale-95'
+                        : plan.price === 0
+                          ? 'border-2 border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                          : 'border-2 border-ink text-ink hover:bg-gray-50 active:scale-95'
+                    }`}>
+                    {plan.cta} →
+                  </Link>
+                </div>
               </div>
             )
           })}
         </div>
 
         {/* Referral section */}
-        <div className="bg-white border border-slate-100 rounded-2xl p-8 mb-8">
-          <div className="grid grid-cols-2 gap-8 items-center">
+        <div className="bg-white border border-gray-200 rounded-lg p-6 sm:p-8 mb-8 fade-in-4">
+          <div className="grid sm:grid-cols-2 gap-8 items-center">
             <div>
               <h2 className="font-serif text-2xl font-bold text-ink mb-2">Refer a colleague, get a free month</h2>
-              <p className="text-slate-500 text-sm leading-relaxed mb-4">
-                Every CS professional you refer who becomes a paying customer earns you one free month — credited automatically after their second payment. No cap. Refer 12 colleagues, get a free year.
+              <p className="text-gray-500 text-sm leading-relaxed mb-4">
+                Every CS professional you refer who becomes a paying customer earns you one free month — credited automatically after their second payment. No cap.
               </p>
               <div className="space-y-2">
                 {[
-                  'Your referral: 1 free month per converted customer',
-                  'Their benefit: 30 days free on the Growth plan',
-                  'Credits auto-applied — no voucher codes needed',
+                  '1 free month per converted referral',
+                  'Their benefit: 30 days free on Growth',
+                  'Credits auto-applied — no voucher codes',
                   'No minimum referrals required',
                 ].map(item => (
-                  <div key={item} className="flex items-start gap-2 text-sm text-slate-600">
-                    <span className="text-green-500 flex-shrink-0">✓</span>
+                  <div key={item} className="flex items-start gap-2 text-sm text-gray-600">
+                    <span className="text-teal flex-shrink-0 font-bold">✓</span>
                     {item}
                   </div>
                 ))}
               </div>
             </div>
-            <div className="bg-slate-50 rounded-xl p-6 text-center">
-              <div className="text-4xl font-semibold text-ink mb-1">50×</div>
-              <div className="text-sm text-slate-500 mb-4">return on every referral</div>
-              <div className="text-xs text-slate-400 leading-relaxed">
-                A free month costs us ₹120 in API fees. A converted customer pays ₹5,999/month. Your referral generates 50× its cost.
+            <div className="bg-gray-50 rounded-lg p-6 text-center border border-gray-100">
+              <div className="font-serif text-4xl font-bold text-ink mb-1">50×</div>
+              <div className="text-sm text-gray-500 mb-4">return on every referral</div>
+              <div className="text-xs text-gray-400 leading-relaxed">
+                A free month costs ₹120 in API fees. A converted customer pays ₹5,999/month. Your referral generates 50× its cost.
               </div>
             </div>
           </div>
         </div>
 
         {/* FAQ */}
-        <div className="mb-8">
+        <div className="mb-10">
           <h2 className="font-serif text-2xl font-bold text-ink mb-6 text-center">Common questions</h2>
-          <div className="space-y-3">
-            {faqs.map(faq => (
-              <details key={faq.q} className="bg-white border border-slate-100 rounded-xl group">
-                <summary className="px-5 py-4 text-sm font-medium text-ink cursor-pointer list-none flex items-center justify-between">
+          <div className="space-y-2 max-w-3xl mx-auto">
+            {faqs.map((faq, i) => (
+              <div key={faq.q} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  className="w-full px-5 py-4 text-sm font-medium text-ink text-left flex items-center justify-between hover:bg-gray-50 transition-colors">
                   {faq.q}
-                  <span className="text-slate-400 group-open:rotate-180 transition-transform">↓</span>
-                </summary>
-                <div className="px-5 pb-4 text-sm text-slate-500 leading-relaxed border-t border-slate-50 pt-3">
-                  {faq.a}
-                </div>
-              </details>
+                  <span className={`text-gray-400 transition-transform flex-shrink-0 ml-3 ${openFaq === i ? 'rotate-180' : ''}`}>↓</span>
+                </button>
+                {openFaq === i && (
+                  <div className="px-5 pb-4 text-sm text-gray-500 leading-relaxed border-t border-gray-50 pt-3">
+                    {faq.a}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </div>
 
         {/* CTA */}
-        <div className="bg-ink text-white rounded-2xl p-8 text-center">
+        <div className="bg-ink text-white rounded-lg p-8 text-center">
           <h2 className="font-serif text-2xl font-bold mb-2">Questions? Talk to us directly</h2>
-          <p className="text-slate-400 text-sm mb-5">We are a small team building this specifically for CS professionals. We respond to every message.</p>
-          <a
-            href="mailto:pvsheg@gmail.com"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-white text-ink font-semibold rounded-xl hover:bg-slate-100 transition-colors text-sm"
-          >
+          <p className="text-gray-400 text-sm mb-5">We are a small team building this specifically for CS professionals. We respond to every message.</p>
+          <a href="mailto:pvsheg@gmail.com"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-white text-ink font-semibold rounded-lg hover:bg-gray-100 transition-colors text-sm active:scale-95">
             Email us →
           </a>
         </div>
+
       </main>
     </div>
   )

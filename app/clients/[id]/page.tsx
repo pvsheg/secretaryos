@@ -20,7 +20,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
   const hasTemplate = !!(client as any).pdf_template_uploaded_at
 
   return (
-    <div className="min-h-screen bg-[#FDFCF9]">
+    <div className="min-h-screen bg-app-bg">
       <Navbar />
       <main className="pt-24 pb-16 px-6 max-w-5xl mx-auto">
 

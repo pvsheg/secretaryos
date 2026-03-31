@@ -212,7 +212,7 @@ export default function NewClientPage() {
   const readonlyCls = "w-full px-4 py-2.5 border border-slate-100 rounded-xl text-sm bg-slate-50 text-slate-600"
 
   return (
-    <div className="min-h-screen bg-[#FDFCF9]">
+    <div className="min-h-screen bg-app-bg">
       <Navbar />
       <main className="pt-24 pb-16 px-6 max-w-3xl mx-auto">
         <div className="flex items-center gap-3 mb-8">

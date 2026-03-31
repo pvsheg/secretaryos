@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'SecretaryOS — AI Compliance Copilot for CS Professionals',
-  description: 'Generate Companies Act compliant board minutes, AGM notices and ROC filings in under 60 seconds.',
+  title: 'SecretaryOS — AI Compliance Documents for Company Secretaries',
+  description: 'Generate board minutes, AGM notices and ROC filings in minutes. Built for practicing CS professionals in India.',
 }
 
 export const viewport: Viewport = {

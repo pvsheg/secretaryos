@@ -213,7 +213,7 @@ function GenerateForm() {
     setDownloading(false)
   }
 
-  const inputCls = 'w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-gold transition-colors bg-white'
+  const inputCls = 'w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 transition-colors bg-gray-50'
   const labelCls = 'block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5'
 
   const currentAgendas = complianceCategory ? AGENDA_LIBRARY[complianceCategory] || {} : {}
@@ -433,7 +433,7 @@ function GenerateForm() {
 
 export default function GeneratePage() {
   return (
-    <div className="min-h-screen bg-[#FDFCF9]">
+    <div className="min-h-screen bg-app-bg">
       <Navbar />
       <main className="pt-24 pb-16 px-6 max-w-6xl mx-auto">
         <h1 className="font-serif text-3xl font-bold text-ink mb-1">Generate document</h1>

@@ -59,46 +59,46 @@ function AuthForm() {
     setLoading(false)
   }
 
-  const inputCls = "w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-slate-400 transition-colors bg-white"
+  const inputCls = "w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 transition-colors bg-gray-50"
 
   return (
-    <div className="min-h-screen bg-[#FDFCF9] flex flex-col items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-app-bg flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
 
         <div className="text-center mb-8">
           <Link href="/" className="font-serif text-2xl font-bold text-ink">
-            Secretary<span className="text-gold">OS</span>
+            Secretary<span className="text-teal">OS</span>
           </Link>
-          <p className="text-slate-500 text-sm mt-1">AI compliance documents for CS professionals</p>
+          <p className="text-gray-500 text-sm mt-1">AI compliance documents for CS professionals</p>
         </div>
 
         {message ? (
-          <div className="bg-white border border-slate-100 rounded-2xl p-8 text-center">
-            <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600 text-xl">✓</div>
+          <div className="bg-white border border-gray-200 rounded-lg p-8 text-center shadow-card">
+            <div className="w-12 h-12 bg-teal/10 rounded-full flex items-center justify-center mx-auto mb-4 text-teal text-xl">✓</div>
             <h2 className="font-semibold text-ink mb-2">Check your email</h2>
-            <p className="text-slate-500 text-sm mb-4">{message}</p>
+            <p className="text-gray-500 text-sm mb-4">{message}</p>
             <button onClick={() => { setMessage(''); setMode('signin') }}
-              className="text-sm text-slate-500 hover:text-ink">← Back to sign in</button>
+              className="text-sm text-gray-500 hover:text-ink transition-colors">← Back to sign in</button>
           </div>
         ) : (
-          <div className="bg-white border border-slate-100 rounded-2xl p-6">
+          <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-card">
 
             {/* Tabs */}
-            <div className="flex gap-1 bg-slate-100 rounded-lg p-1 mb-5">
+            <div className="flex gap-1 bg-gray-100 rounded-lg p-1 mb-5">
               {[{ id: 'signin', label: 'Sign in' }, { id: 'signup', label: 'Sign up' }].map(t => (
                 <button key={t.id} onClick={() => { setMode(t.id as any); setError('') }}
-                  className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${mode === t.id ? 'bg-white text-ink shadow-sm' : 'text-slate-500'}`}>
+                  className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${mode === t.id ? 'bg-white text-ink shadow-sm' : 'text-gray-500'}`}>
                   {t.label}
                 </button>
               ))}
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-sm text-red-600 mb-4">{error}</div>
+              <div className="bg-red-50 border border-red-100 rounded-lg p-3 text-sm text-red-600 mb-4">{error}</div>
             )}
 
             {ref && (
-              <div className="bg-green-50 border border-green-100 rounded-xl p-3 text-sm text-green-700 mb-4">
+              <div className="bg-teal/5 border border-teal/20 rounded-lg p-3 text-sm text-teal-dark mb-4">
                 ✓ Referral applied — 30 days free on Growth plan
               </div>
             )}
@@ -116,7 +116,7 @@ function AuthForm() {
               <button
                 onClick={mode === 'signin' ? handleSignIn : handleSignUp}
                 disabled={loading}
-                className="w-full py-3 bg-ink text-white font-semibold rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-50 text-sm">
+                className="w-full py-3 bg-teal text-white font-semibold rounded-lg hover:bg-teal-dark transition-all disabled:opacity-50 text-sm active:scale-95 shadow-sm hover:shadow-card">
                 {loading
                   ? <span className="flex items-center justify-center gap-2">
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
@@ -128,7 +128,7 @@ function AuthForm() {
             </div>
 
             {mode === 'signin' && (
-              <p className="text-center text-xs text-slate-400 mt-4">
+              <p className="text-center text-xs text-gray-400 mt-4">
                 No account yet?{' '}
                 <button onClick={() => { setMode('signup'); setError('') }} className="text-ink font-medium hover:underline">
                   Sign up free
@@ -138,7 +138,7 @@ function AuthForm() {
           </div>
         )}
 
-        <p className="text-center text-xs text-slate-400 mt-6">
+        <p className="text-center text-xs text-gray-400 mt-6">
           By signing up you agree to our{' '}
           <Link href="/terms" className="underline">terms</Link>{' '}and{' '}
           <Link href="/privacy" className="underline">privacy policy</Link>
@@ -151,8 +151,8 @@ function AuthForm() {
 export default function AuthPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#FDFCF9] flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-slate-200 border-t-ink rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-app-bg flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-gray-200 border-t-teal rounded-full animate-spin"></div>
       </div>
     }>
       <AuthForm />

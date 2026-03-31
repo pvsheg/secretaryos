@@ -54,7 +54,7 @@ export default function DocumentPage() {
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-[#FDFCF9]">
+    <div className="min-h-screen bg-app-bg">
       <Navbar />
       <div className="pt-32 flex justify-center">
         <div className="w-6 h-6 border-2 border-slate-200 border-t-ink rounded-full animate-spin"></div>
@@ -65,7 +65,7 @@ export default function DocumentPage() {
   if (!doc) return null
 
   return (
-    <div className="min-h-screen bg-[#FDFCF9]">
+    <div className="min-h-screen bg-app-bg">
       <Navbar />
       <main className="pt-24 pb-16 px-6 max-w-4xl mx-auto">
         {/* Breadcrumb */}
