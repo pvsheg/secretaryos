@@ -99,22 +99,22 @@ export default async function DashboardPage() {
 
         {/* ── STATS ─────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-4 mb-8">
-          <div className="card card-hover fade-in-2">
+          <Link href="/clients" className="card card-hover fade-in-2">
             <div className="flex items-start justify-between mb-4">
               <span className="text-2xl">🏢</span>
               <span className="text-xs text-gray-400 font-medium">Total</span>
             </div>
             <div className="font-serif text-3xl font-semibold text-ink mb-1">{clients?.length || 0}</div>
             <div className="text-sm text-gray-500">Client companies</div>
-          </div>
-          <div className="card card-hover fade-in-3">
+          </Link>
+          <Link href="/documents" className="card card-hover fade-in-3">
             <div className="flex items-start justify-between mb-4">
               <span className="text-2xl">📄</span>
               <span className="text-xs text-gray-400 font-medium">All time</span>
             </div>
             <div className="font-serif text-3xl font-semibold text-ink mb-1">{totalDocs || 0}</div>
             <div className="text-sm text-gray-500">Documents generated</div>
-          </div>
+          </Link>
         </div>
 
         {/* ── BODY: QUICK ACTIONS + RECENT DOCS ────────────────────────── */}
