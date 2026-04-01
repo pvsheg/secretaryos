@@ -151,6 +151,7 @@ function GenerateForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           doc_type: docType,
+          client_id: selectedClient.id,
           company_name: selectedClient.company_name,
           cin: selectedClient.cin,
           registered_office: selectedClient.registered_office,

@@ -9,6 +9,7 @@ const links = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/clients', label: 'Clients' },
   { href: '/documents', label: 'Documents' },
+  { href: '/activity', label: 'Activity' },
 ]
 
 export default function Navbar() {

@@ -315,9 +315,12 @@ ${special_instructions ? '\nSPECIAL INSTRUCTIONS (incorporate these exactly as s
     // Log usage for rate limiting
     const { error: usageErr } = await supabase.from('generation_usage').insert({
       user_id: user.id,
+      client_id: client_id || null,
+      company_name: company_name || null,
       doc_type,
       model_used: model,
       tokens_used: message.usage.input_tokens + message.usage.output_tokens,
+      input_hash: inputHash,
     })
     if (usageErr) console.error('Failed to log generation usage:', usageErr.message)
 

@@ -94,9 +94,12 @@ create index if not exists documents_created_at_idx on documents(created_at desc
 create table if not exists generation_usage (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users(id) on delete cascade not null,
+  client_id uuid references clients(id) on delete set null,
+  company_name text,
   doc_type text not null,
   model_used text,
   tokens_used integer,
+  input_hash text,
   created_at timestamptz default now() not null
 );
 
@@ -114,3 +117,5 @@ create index if not exists generation_usage_user_doc_idx
 -- Index for fast rate-limit queries (user + time range)
 create index if not exists generation_usage_user_created_idx
   on generation_usage(user_id, created_at desc);
+create index if not exists generation_usage_input_hash_idx
+  on generation_usage(input_hash);
