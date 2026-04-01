@@ -105,8 +105,8 @@ export default function NewClientPage() {
       registration_date: result.registration_date || '',
       industrial_classification: result.industrial_classification || '',
     }))
-    setFetchOk(true)
-    setFetchMsg('Company selected from MCA database. Review all details below and add directors.')
+    // Auto-fetch full CIN details to populate roc_code, capital, sub_category etc.
+    fetchFromMCAByCin(result.cin)
   }
 
   function updateForm(key: string, val: string) { setForm(f => ({ ...f, [key]: val })) }
@@ -116,12 +116,9 @@ export default function NewClientPage() {
   function addDirector() { setDirectors(d => [...d, emptyDirector()]) }
   function removeDirector(idx: number) { setDirectors(d => d.filter((_, i) => i !== idx)) }
 
-  async function fetchFromMCA() {
-    const cin = cinInput.trim().toUpperCase()
-    if (!cin || cin.length !== 21) {
-      setFetchMsg('Please enter a valid 21-character CIN first.')
-      setFetchOk(false); return
-    }
+  async function fetchFromMCAByCin(cinValue: string) {
+    const cin = cinValue.trim().toUpperCase()
+    if (!cin || cin.length !== 21) return
     setFetching(true); setFetchOk(null); setFetchMsg('')
     try {
       const workerUrl = process.env.NEXT_PUBLIC_CLOUDFLARE_WORKER_URL
@@ -161,9 +158,17 @@ export default function NewClientPage() {
     } catch {
       setFetchOk(false)
       setFetchMsg('Could not reach MCA database. Please fill in details manually.')
-      setForm(f => ({ ...f, cin: cinInput.toUpperCase() }))
     }
     setFetching(false)
+  }
+
+  async function fetchFromMCA() {
+    const cin = cinInput.trim().toUpperCase()
+    if (!cin || cin.length !== 21) {
+      setFetchMsg('Please enter a valid 21-character CIN first.')
+      setFetchOk(false); return
+    }
+    await fetchFromMCAByCin(cin)
   }
 
   async function handleSubmit(e: React.FormEvent) {

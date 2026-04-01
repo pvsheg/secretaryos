@@ -64,6 +64,8 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                 {[
                   { label: 'Registered office', val: client.registered_office },
                   { label: 'Company type', val: (client as any).company_type || 'Not set' },
+                  { label: 'Company category', val: (client as any).company_category || 'Not set' },
+                  { label: 'Industrial classification', val: (client as any).industrial_classification || 'Not set' },
                   { label: 'Company status', val: (client as any).company_status || 'Active' },
                   { label: 'Financial year end', val: client.financial_year_end },
                   { label: 'Authorised capital', val: client.authorised_capital || 'Not set' },
