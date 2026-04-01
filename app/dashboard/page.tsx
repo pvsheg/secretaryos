@@ -80,7 +80,7 @@ export default async function DashboardPage() {
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${planBadge[plan] || planBadge.free}`}>
                   {planLabels[plan] || 'Free'} plan
                 </span>
-                <span className="text-xs text-gray-400">{docsUsed} / {planLimit} this month</span>
+                <span className="text-xs text-gray-400">{docsUsed} / {planLimit} {plan === 'free' ? 'all time' : 'this month'}</span>
               </div>
               <div className="w-36 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <div

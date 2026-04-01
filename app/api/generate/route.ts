@@ -340,6 +340,7 @@ ${special_instructions ? '\nSPECIAL INSTRUCTIONS (incorporate these exactly as s
           compliance_category: compliance_category || null,
           agenda_types: agenda_types || [],
           agenda_items: agenda_items || null,
+          directors_present: directors_present || null,
           special_instructions: special_instructions || null,
         },
       })

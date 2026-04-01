@@ -10,6 +10,7 @@ const links = [
   { href: '/clients', label: 'Clients' },
   { href: '/documents', label: 'Documents' },
   { href: '/activity', label: 'Activity' },
+  { href: '/account', label: 'Account' },
 ]
 
 export default function Navbar() {
