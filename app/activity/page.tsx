@@ -181,18 +181,19 @@ export default async function ActivityPage({
                     const companyName = (item.clients as any)?.company_name || item.company_name || 'Unknown company'
                     const cin = (item.clients as any)?.cin
                     const savedDoc = item.input_hash ? savedByHash.get(item.input_hash) : undefined
+                    const rowHref = savedDoc
+                      ? `/documents/${savedDoc.id}`
+                      : item.client_id
+                      ? `/generate?client=${item.client_id}`
+                      : null
 
-                    return (
-                      <div
-                        key={item.id}
-                        className={`flex items-center gap-4 px-5 py-4 ${idx !== 0 ? 'border-t border-slate-100' : ''}`}
-                      >
-                        {/* Icon */}
+                    const rowClass = `flex items-center gap-4 px-5 py-4 transition-colors ${idx !== 0 ? 'border-t border-slate-100' : ''} ${rowHref ? 'hover:bg-slate-50/70 cursor-pointer' : ''}`
+
+                    const inner = (
+                      <>
                         <div className="w-9 h-9 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center text-base flex-shrink-0">
                           {DOC_TYPE_ICONS[item.doc_type] || '📄'}
                         </div>
-
-                        {/* Main info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className={`text-xs font-medium px-2 py-0.5 rounded-md border ${DOC_TYPE_COLORS[item.doc_type] || 'bg-slate-50 text-slate-600 border-slate-100'}`}>
@@ -205,28 +206,22 @@ export default async function ActivityPage({
                           <p className="text-sm font-semibold text-ink mt-1 truncate">{companyName}</p>
                           {cin && <p className="text-xs text-slate-400 font-mono">{cin}</p>}
                         </div>
-
-                        {/* Right side */}
-                        <div className="flex items-center gap-3 flex-shrink-0">
+                        <div className="flex items-center gap-2 flex-shrink-0">
                           <span className="text-xs text-slate-400 whitespace-nowrap">
                             {formatRelativeDate(item.created_at)}
                           </span>
-                          {savedDoc ? (
-                            <Link
-                              href={`/documents/${savedDoc.id}`}
-                              className="text-xs font-medium text-teal hover:text-teal-dark transition-colors whitespace-nowrap"
-                            >
-                              View →
-                            </Link>
-                          ) : item.client_id ? (
-                            <Link
-                              href={`/generate?client=${item.client_id}`}
-                              className="text-xs text-slate-400 hover:text-ink transition-colors whitespace-nowrap"
-                            >
-                              Regenerate
-                            </Link>
-                          ) : null}
+                          {rowHref && <span className="text-slate-300">→</span>}
                         </div>
+                      </>
+                    )
+
+                    return rowHref ? (
+                      <Link key={item.id} href={rowHref} className={rowClass}>
+                        {inner}
+                      </Link>
+                    ) : (
+                      <div key={item.id} className={rowClass}>
+                        {inner}
                       </div>
                     )
                   })}

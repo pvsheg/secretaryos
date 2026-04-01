@@ -171,41 +171,24 @@ export default async function DashboardPage() {
                   </Link>
                 </div>
               ) : (
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-50">
-                      <th className="px-5 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Document</th>
-                      <th className="px-5 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider hidden sm:table-cell">Type</th>
-                      <th className="px-5 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider hidden md:table-cell">Date</th>
-                      <th className="px-5 py-2.5"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {documents.map((doc: any, idx: number) => (
-                      <tr key={doc.id}
-                        className={`hover:bg-gray-50 transition-colors group ${idx !== 0 ? 'border-t border-gray-50' : ''}`}>
-                        <td className="px-5 py-3">
-                          <div className="font-medium text-sm text-ink truncate max-w-[180px] sm:max-w-none">{doc.title}</div>
-                          <div className="text-xs text-gray-400 mt-0.5">{(doc.clients as any)?.company_name}</div>
-                        </td>
-                        <td className="px-5 py-3 hidden sm:table-cell">
-                          <span className={`text-xs px-2 py-1 rounded-full font-medium ${TYPE_COLORS[doc.type] || 'bg-gray-100 text-gray-600'}`}>
-                            {TYPE_LABELS[doc.type] || doc.type}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3 hidden md:table-cell text-xs text-gray-400 whitespace-nowrap">
-                          {new Date(doc.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <Link href={`/documents/${doc.id}`}
-                            className="text-xs text-teal font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                            View →
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div>
+                  {documents.map((doc: any, idx: number) => (
+                    <Link key={doc.id} href={`/documents/${doc.id}`}
+                      className={`flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors ${idx !== 0 ? 'border-t border-gray-50' : ''}`}>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm text-ink truncate">{doc.title}</div>
+                        <div className="text-xs text-gray-400 mt-0.5">{(doc.clients as any)?.company_name}</div>
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium hidden sm:inline ${TYPE_COLORS[doc.type] || 'bg-gray-100 text-gray-600'}`}>
+                        {TYPE_LABELS[doc.type] || doc.type}
+                      </span>
+                      <span className="text-xs text-gray-400 whitespace-nowrap hidden md:inline">
+                        {new Date(doc.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+                      </span>
+                      <span className="text-gray-300 flex-shrink-0">→</span>
+                    </Link>
+                  ))}
+                </div>
               )}
             </div>
           </div>

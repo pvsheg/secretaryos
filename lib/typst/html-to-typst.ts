@@ -123,17 +123,16 @@ function escapeStr(s: string): string {
 }
 
 function htmlToTypstInline(html: string): string {
-  // Convert inline HTML to Typst
   return html
-    // Bold
-    .replace(/<strong>(.*?)<\/strong>/gi, '*$1*')
-    .replace(/<b>(.*?)<\/b>/gi, '*$1*')
-    // Italic
-    .replace(/<em>(.*?)<\/em>/gi, '_$1_')
-    .replace(/<i>(.*?)<\/i>/gi, '_$1_')
-    // Line breaks
-    .replace(/<br\s*\/?>/gi, ' \\\n')
-    // Strip remaining tags
+    // Mark <br> before anything else
+    .replace(/<br\s*\/?>/gi, '\x00')
+    // Mark bold/italic content with non-printable sentinels so we can
+    // escape everything else first, then restore Typst markup safely
+    .replace(/<strong>([\s\S]*?)<\/strong>/gi, '\x01$1\x01')
+    .replace(/<b>([\s\S]*?)<\/b>/gi, '\x01$1\x01')
+    .replace(/<em>([\s\S]*?)<\/em>/gi, '\x02$1\x02')
+    .replace(/<i>([\s\S]*?)<\/i>/gi, '\x02$1\x02')
+    // Strip remaining HTML tags
     .replace(/<[^>]+>/g, '')
     // Decode HTML entities
     .replace(/&amp;/g, '&')
@@ -141,12 +140,34 @@ function htmlToTypstInline(html: string): string {
     .replace(/&gt;/g, '>')
     .replace(/&nbsp;/g, ' ')
     .replace(/&middot;/g, '·')
-    .replace(/&#\d+;/g, (m) => String.fromCharCode(parseInt(m.slice(2, -1))))
-    // Escape Typst special chars
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n)))
+    // Escape ALL Typst special characters (including [ ] _ * which were
+    // previously missed — these cause "unclosed delimiter" errors)
+    .replace(/\\/g, '\\\\')
     .replace(/#/g, '\\#')
-    .replace(/@/g, '\\@')
     .replace(/\$/g, '\\$')
+    .replace(/@/g, '\\@')
+    .replace(/</g, '\\<')
+    .replace(/>/g, '\\>')
+    .replace(/\[/g, '\\[')
+    .replace(/\]/g, '\\]')
+    .replace(/\*/g, '\\*')
+    .replace(/_/g, '\\_')
+    .replace(/`/g, '\\`')
+    .replace(/~/g, '\\~')
+    .replace(/\^/g, '\\^')
+    // Smart quotes / dashes (safe in Typst, no escaping needed)
+    .replace(/\u2018|\u2019/g, "'")
+    .replace(/\u201C|\u201D/g, '"')
+    .replace(/\u2013/g, '--')
+    .replace(/\u2014/g, '---')
     .replace(/₹/g, 'Rs. ')
+    // Restore bold and italic using Typst markup — * and _ in the content
+    // are already escaped above so they won't interfere with these delimiters
+    .replace(/\x01([\s\S]*?)\x01/g, '*$1*')
+    .replace(/\x02([\s\S]*?)\x02/g, '_$1_')
+    // Restore line breaks
+    .replace(/\x00/g, ' \\\n')
     .trim()
 }
 
