@@ -26,9 +26,9 @@ const MODEL_BY_TYPE: Record<string, string> = {
 }
 
 const DOC_TYPE_LABELS: Record<string, string> = {
-  board_minutes: 'board minutes document',
-  agm_notice: 'AGM notice',
-  roc_filing: 'ROC filing resolution',
+  board_minutes: 'Board Minutes',
+  agm_notice: 'AGM Notice',
+  roc_filing: 'ROC Filing',
 }
 
 const SYSTEM_PROMPTS: Record<string, string> = {
@@ -193,21 +193,35 @@ export async function POST(req: NextRequest) {
     // Cache key is deterministic on inputs, so the same document never
     // regenerates even if the user is at their limit.
     const inputHash = createHash('sha256')
-      .update(`${user.id}-${cin}-${meeting_date}-${doc_type}-${agenda_types.sort().join('-')}-${agenda_items || ''}`)
+      .update(`${user.id}-${cin}-${meeting_date}-${doc_type}-${[...agenda_types].sort().join('-')}-${agenda_items || ''}-${special_instructions || ''}`)
       .digest('hex')
 
-    const { data: cached } = await supabase
-      .from('documents')
-      .select('content')
+    // Cache check via generation_usage (no dependency on documents.input_hash)
+    const { data: cachedUsage } = await supabase
+      .from('generation_usage')
+      .select('id')
       .eq('user_id', user.id)
       .eq('input_hash', inputHash)
       .order('created_at', { ascending: false })
       .limit(1)
       .single()
 
-    if (cached?.content) {
-      console.log('Cache hit — returning cached document')
-      return NextResponse.json({ content: cached.content, cached: true })
+    if (cachedUsage) {
+      // Find the most recent saved document for this client + type
+      const { data: cachedDoc } = await supabase
+        .from('documents')
+        .select('content')
+        .eq('user_id', user.id)
+        .eq('client_id', client_id)
+        .eq('type', doc_type)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (cachedDoc?.content) {
+        console.log('Cache hit — returning cached document')
+        return NextResponse.json({ content: cachedDoc.content, cached: true })
+      }
     }
 
     // ── RATE LIMITING ─────────────────────────────────────────────────
@@ -313,15 +327,42 @@ ${special_instructions ? '\nSPECIAL INSTRUCTIONS (incorporate these exactly as s
     content = content.replace(/```html|```/g, '').trim()
 
     // Log usage for rate limiting
-    await supabase.from('generation_usage').insert({
+    const { error: usageErr } = await supabase.from('generation_usage').insert({
       user_id: user.id,
+      client_id: client_id || null,
+      company_name: company_name || null,
       doc_type,
       model_used: model,
       tokens_used: message.usage.input_tokens + message.usage.output_tokens,
+      input_hash: inputHash,
     })
+    if (usageErr) console.error('Failed to log generation usage:', usageErr.message)
+
+    // Auto-save document so it's always accessible from activity / documents
+    if (client_id) {
+      const docTitle = `${company_name} — ${DOC_TYPE_LABELS[doc_type] || doc_type} — ${meeting_date || 'undated'}`
+      const { error: saveErr } = await supabase.from('documents').insert({
+        user_id: user.id,
+        client_id,
+        type: doc_type,
+        title: docTitle,
+        content,
+        metadata: {
+          meeting_date: meeting_date || null,
+          meeting_venue: meeting_venue || null,
+          compliance_category: compliance_category || null,
+          agenda_types: agenda_types || [],
+          agenda_items: agenda_items || null,
+          directors_present: directors_present || null,
+          special_instructions: special_instructions || null,
+        },
+      })
+      if (saveErr) console.error('Failed to auto-save document:', saveErr.message)
+    }
 
     return NextResponse.json({
       content,
+      input_hash: inputHash,
       cached: false,
       model_used: model,
       tokens: message.usage,

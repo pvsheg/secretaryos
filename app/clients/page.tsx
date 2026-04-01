@@ -18,7 +18,7 @@ export default async function ClientsPage() {
     .limit(100)
 
   return (
-    <div className="min-h-screen bg-[#FDFCF9]">
+    <div className="min-h-screen bg-app-bg">
       <Navbar />
       <main className="pt-24 pb-16 px-6 max-w-6xl mx-auto">
         <div className="flex items-center justify-between gap-3 mb-8">
@@ -43,7 +43,7 @@ export default async function ClientsPage() {
         ) : (
           <div className="grid gap-3">
             {clients.map((client: any) => (
-              <div key={client.id} className="bg-white border border-slate-100 rounded-2xl p-5 flex items-center gap-5 hover:border-slate-200 transition-colors">
+              <Link key={client.id} href={`/clients/${client.id}`} className="bg-white border border-slate-100 rounded-2xl p-5 flex items-center gap-5 hover:border-slate-200 hover:bg-slate-50/50 transition-colors">
                 <div className="w-11 h-11 bg-ink rounded-xl flex items-center justify-center text-white font-bold text-base flex-shrink-0">
                   {client.company_name.charAt(0)}
                 </div>
@@ -57,16 +57,9 @@ export default async function ClientsPage() {
                     <div className="text-base font-bold text-ink">{(client.directors as any)?.[0]?.count || 0}</div>
                     <div className="text-xs text-slate-400">Directors</div>
                   </div>
-                  <div className="flex gap-2">
-                    <Link href={`/generate?client=${client.id}`} className="px-3 py-1.5 bg-ink text-white text-xs font-medium rounded-lg hover:bg-slate-800 transition-colors">
-                      Generate
-                    </Link>
-                    <Link href={`/clients/${client.id}`} className="px-3 py-1.5 border border-slate-200 text-ink text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors">
-                      View
-                    </Link>
-                  </div>
+                  <span className="text-slate-300 text-sm">→</span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

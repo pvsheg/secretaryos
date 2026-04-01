@@ -75,9 +75,13 @@ CREATE POLICY "Advisors can view own record" ON advisors
 CREATE OR REPLACE FUNCTION create_default_subscription()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO subscriptions (user_id, plan, monthly_doc_limit, billing_cycle_start)
+  INSERT INTO public.subscriptions (user_id, plan, monthly_doc_limit, billing_cycle_start)
   VALUES (NEW.id, 'free', 3, CURRENT_DATE)
   ON CONFLICT (user_id) DO NOTHING;
+  RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  -- Log the error but never block user creation
+  RAISE WARNING 'create_default_subscription failed for user %: %', NEW.id, SQLERRM;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

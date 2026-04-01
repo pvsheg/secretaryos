@@ -45,7 +45,7 @@ export default function MCADataPage() {
   const total = stats?.active_companies || 1998213
 
   return (
-    <div className="min-h-screen bg-[#FDFCF9]">
+    <div className="min-h-screen bg-app-bg">
       <Navbar />
       <main className="pt-24 pb-16 px-6 max-w-4xl mx-auto">
         <div className="text-center mb-12">
