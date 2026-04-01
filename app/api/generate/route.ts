@@ -26,9 +26,9 @@ const MODEL_BY_TYPE: Record<string, string> = {
 }
 
 const DOC_TYPE_LABELS: Record<string, string> = {
-  board_minutes: 'board minutes document',
-  agm_notice: 'AGM notice',
-  roc_filing: 'ROC filing resolution',
+  board_minutes: 'Board Minutes',
+  agm_notice: 'AGM Notice',
+  roc_filing: 'ROC Filing',
 }
 
 const SYSTEM_PROMPTS: Record<string, string> = {
@@ -323,6 +323,28 @@ ${special_instructions ? '\nSPECIAL INSTRUCTIONS (incorporate these exactly as s
       input_hash: inputHash,
     })
     if (usageErr) console.error('Failed to log generation usage:', usageErr.message)
+
+    // Auto-save document so it's always accessible from activity / documents
+    if (client_id) {
+      const docTitle = `${company_name} — ${DOC_TYPE_LABELS[doc_type] || doc_type} — ${meeting_date || 'undated'}`
+      const { error: saveErr } = await supabase.from('documents').insert({
+        user_id: user.id,
+        client_id,
+        type: doc_type,
+        title: docTitle,
+        content,
+        input_hash: inputHash,
+        metadata: {
+          meeting_date: meeting_date || null,
+          meeting_venue: meeting_venue || null,
+          compliance_category: compliance_category || null,
+          agenda_types: agenda_types || [],
+          agenda_items: agenda_items || null,
+          special_instructions: special_instructions || null,
+        },
+      })
+      if (saveErr) console.error('Failed to auto-save document:', saveErr.message)
+    }
 
     return NextResponse.json({
       content,

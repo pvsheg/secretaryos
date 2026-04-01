@@ -13,6 +13,7 @@ function AuthForm() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -42,6 +43,7 @@ function AuthForm() {
   async function handleSignUp() {
     if (!email || !password) { setError('Please enter your email and password'); return }
     if (password.length < 8) { setError('Password must be at least 8 characters'); return }
+    if (password !== confirmPassword) { setError('Passwords do not match'); return }
     if (isDisposableEmail(email)) {
       setError('Please use your professional or personal email — temporary email services are not accepted.')
       return
@@ -86,7 +88,7 @@ function AuthForm() {
             {/* Tabs */}
             <div className="flex gap-1 bg-gray-100 rounded-lg p-1 mb-5">
               {[{ id: 'signin', label: 'Sign in' }, { id: 'signup', label: 'Sign up' }].map(t => (
-                <button key={t.id} onClick={() => { setMode(t.id as any); setError('') }}
+                <button key={t.id} onClick={() => { setMode(t.id as any); setError(''); setConfirmPassword('') }}
                   className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${mode === t.id ? 'bg-white text-ink shadow-sm' : 'text-gray-500'}`}>
                   {t.label}
                 </button>
@@ -113,6 +115,13 @@ function AuthForm() {
                 value={password} onChange={e => setPassword(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && (mode === 'signin' ? handleSignIn() : handleSignUp())}
                 autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} />
+              {mode === 'signup' && (
+                <input type="password" className={inputCls}
+                  placeholder="Confirm password"
+                  value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSignUp()}
+                  autoComplete="new-password" />
+              )}
               <button
                 onClick={mode === 'signin' ? handleSignIn : handleSignUp}
                 disabled={loading}

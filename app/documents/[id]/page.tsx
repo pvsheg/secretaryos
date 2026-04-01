@@ -4,11 +4,18 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import { createClient } from '@/lib/supabase'
+import { AGENDA_LIBRARY } from '@/lib/agenda-library'
 
 const DOC_TYPE_LABELS: Record<string, string> = {
   board_minutes: 'Board Minutes',
   agm_notice: 'AGM Notice',
   roc_filing: 'ROC Filing',
+}
+
+const COMPLIANCE_LABELS: Record<string, string> = {
+  mandatory_annual: 'Mandatory Annual',
+  event_based: 'Event Based',
+  offline: 'Offline / Ongoing',
 }
 
 export default function DocumentPage() {
@@ -118,6 +125,59 @@ export default function DocumentPage() {
             dangerouslySetInnerHTML={{ __html: doc.content }}
           />
         </div>
+
+        {/* Generation details */}
+        {doc.metadata && Object.keys(doc.metadata).some(k => doc.metadata[k]) && (
+          <div className="mt-6 bg-white border border-slate-100 rounded-2xl p-5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4">Generation details</p>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {doc.metadata.meeting_date && (
+                <div>
+                  <p className="text-xs text-slate-400 mb-0.5">Meeting date</p>
+                  <p className="text-sm text-ink font-medium">
+                    {new Date(doc.metadata.meeting_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </p>
+                </div>
+              )}
+              {doc.metadata.meeting_venue && (
+                <div>
+                  <p className="text-xs text-slate-400 mb-0.5">Venue</p>
+                  <p className="text-sm text-ink font-medium">{doc.metadata.meeting_venue}</p>
+                </div>
+              )}
+              {doc.metadata.compliance_category && (
+                <div>
+                  <p className="text-xs text-slate-400 mb-0.5">Compliance category</p>
+                  <p className="text-sm text-ink font-medium">{COMPLIANCE_LABELS[doc.metadata.compliance_category] || doc.metadata.compliance_category}</p>
+                </div>
+              )}
+              {doc.metadata.agenda_types?.length > 0 && (
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-slate-400 mb-1.5">Agenda items</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {doc.metadata.agenda_types.map((key: string) => (
+                      <span key={key} className="text-xs px-2 py-1 bg-slate-50 border border-slate-100 rounded-lg text-slate-600">
+                        {AGENDA_LIBRARY[key]?.label || key}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {doc.metadata.agenda_items && (
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-slate-400 mb-0.5">Additional agenda</p>
+                  <p className="text-sm text-ink whitespace-pre-line">{doc.metadata.agenda_items}</p>
+                </div>
+              )}
+              {doc.metadata.special_instructions && (
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-slate-400 mb-0.5">Special instructions</p>
+                  <p className="text-sm text-ink whitespace-pre-line">{doc.metadata.special_instructions}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Back to client */}
         {doc.clients && (

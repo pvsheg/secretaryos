@@ -175,6 +175,7 @@ function GenerateForm() {
         setEditedOutput(data.content)
         setInputHash(data.input_hash || '')
         setIsEditing(false)
+        setSaved(true)  // auto-saved server-side
         if (!data.cached) fetchUsage()
         // On mobile the output panel is below the form — scroll it into view
         setTimeout(() => {
