@@ -196,18 +196,32 @@ export async function POST(req: NextRequest) {
       .update(`${user.id}-${cin}-${meeting_date}-${doc_type}-${[...agenda_types].sort().join('-')}-${agenda_items || ''}-${special_instructions || ''}`)
       .digest('hex')
 
-    const { data: cached } = await supabase
-      .from('documents')
-      .select('content')
+    // Cache check via generation_usage (no dependency on documents.input_hash)
+    const { data: cachedUsage } = await supabase
+      .from('generation_usage')
+      .select('id')
       .eq('user_id', user.id)
       .eq('input_hash', inputHash)
       .order('created_at', { ascending: false })
       .limit(1)
       .single()
 
-    if (cached?.content) {
-      console.log('Cache hit — returning cached document')
-      return NextResponse.json({ content: cached.content, cached: true })
+    if (cachedUsage) {
+      // Find the most recent saved document for this client + type
+      const { data: cachedDoc } = await supabase
+        .from('documents')
+        .select('content')
+        .eq('user_id', user.id)
+        .eq('client_id', client_id)
+        .eq('type', doc_type)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (cachedDoc?.content) {
+        console.log('Cache hit — returning cached document')
+        return NextResponse.json({ content: cachedDoc.content, cached: true })
+      }
     }
 
     // ── RATE LIMITING ─────────────────────────────────────────────────
@@ -333,7 +347,6 @@ ${special_instructions ? '\nSPECIAL INSTRUCTIONS (incorporate these exactly as s
         type: doc_type,
         title: docTitle,
         content,
-        input_hash: inputHash,
         metadata: {
           meeting_date: meeting_date || null,
           meeting_venue: meeting_venue || null,

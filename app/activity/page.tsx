@@ -81,15 +81,20 @@ export default async function ActivityPage({
   // Fetch saved documents to match against generations
   const [{ data: activity }, { data: savedDocs }, { data: subscription }, { count: totalCount }] = await Promise.all([
     usageQuery,
-    supabase.from('documents').select('id, input_hash, type, title').not('input_hash', 'is', null),
+    supabase.from('documents').select('id, client_id, type, title, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(500),
     supabase.from('subscriptions').select('plan, monthly_doc_limit').single(),
     supabase.from('generation_usage').select('id', { count: 'exact', head: true }),
   ])
 
-  // Build a map from input_hash → saved document id
-  const savedByHash = new Map<string, { id: string; title: string }>(
-    (savedDocs || []).map(d => [d.input_hash!, { id: d.id, title: d.title }])
-  )
+  // Match generation → document by client_id + doc_type + time proximity (within 3 minutes)
+  const THREE_MIN = 3 * 60 * 1000
+  function findSavedDoc(item: any) {
+    return (savedDocs || []).find(d =>
+      d.client_id === item.client_id &&
+      d.type === item.doc_type &&
+      Math.abs(new Date(d.created_at).getTime() - new Date(item.created_at).getTime()) < THREE_MIN
+    )
+  }
 
   const plan = subscription?.plan || 'free'
   const planLimit = subscription?.monthly_doc_limit || 3
@@ -180,7 +185,7 @@ export default async function ActivityPage({
                   {items.map((item: any, idx: number) => {
                     const companyName = (item.clients as any)?.company_name || item.company_name || 'Unknown company'
                     const cin = (item.clients as any)?.cin
-                    const savedDoc = item.input_hash ? savedByHash.get(item.input_hash) : undefined
+                    const savedDoc = findSavedDoc(item)
                     const rowHref = savedDoc
                       ? `/documents/${savedDoc.id}`
                       : item.client_id

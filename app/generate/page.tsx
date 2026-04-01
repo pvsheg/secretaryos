@@ -214,8 +214,15 @@ function GenerateForm() {
     const title = `${selectedClient.company_name} — ${DOC_TYPES.find(d => d.id === docType)?.label} — ${form.meeting_date}`
     await supabase.from('documents').insert({
       client_id: selectedClient.id, user_id: session.user.id, type: docType, title, content: getCurrentContent(),
-      input_hash: inputHash || null,
-      metadata: { meeting_date: form.meeting_date, meeting_venue: form.meeting_venue, agenda_items: form.agenda_items, agenda_types: selectedAgendas },
+      metadata: {
+        meeting_date: form.meeting_date,
+        meeting_venue: form.meeting_venue,
+        directors_present: form.directors_present,
+        compliance_category: complianceCategory,
+        agenda_types: selectedAgendas,
+        agenda_items: form.agenda_items,
+        special_instructions: specialInstructions,
+      },
     })
     setSaved(true)
   }
