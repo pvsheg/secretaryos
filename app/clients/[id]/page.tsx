@@ -3,6 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import TemplateUpload from '@/components/TemplateUpload'
+import SyncFromMCA from '@/components/SyncFromMCA'
 
 export default async function ClientDetailPage({ params }: { params: { id: string } }) {
   const supabase = createServerSupabaseClient()
@@ -80,6 +81,18 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* MCA SYNC */}
+            <div className="bg-white border border-slate-100 rounded-2xl p-5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">MCA sync</p>
+              {(client as any).mca_last_synced && (
+                <p className="text-xs text-slate-400 mb-3">
+                  Last synced: {new Date((client as any).mca_last_synced).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
+              )}
+              <SyncFromMCA clientId={client.id} cin={client.cin} />
+              <p className="text-xs text-slate-400 mt-2">Updates company details and capital structure. Directors are managed separately.</p>
             </div>
 
             {/* DIRECTORS */}
