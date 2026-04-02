@@ -180,7 +180,7 @@ export default function NewClientPage() {
     const clientData = {
       user_id: session.user.id,
       company_name: form.company_name,
-      cin: form.cin,
+      cin: form.cin.trim().toUpperCase(),
       registered_office: form.registered_office,
       financial_year_end: form.financial_year_end,
       company_type: form.company_type,
@@ -197,10 +197,30 @@ export default function NewClientPage() {
       mca_last_synced: fetchOk ? new Date().toISOString() : null,
     }
 
+    // Check for duplicate CIN before inserting
+    const { data: existing } = await supabase
+      .from('clients')
+      .select('id, company_name')
+      .eq('user_id', session.user.id)
+      .eq('cin', form.cin.trim().toUpperCase())
+      .single()
+
+    if (existing) {
+      setError(`A client with this CIN already exists: "${existing.company_name}". Each company can only be added once.`)
+      setLoading(false); return
+    }
+
     const { data: client, error: clientErr } = await supabase
       .from('clients').insert(clientData).select().single()
 
-    if (clientErr) { setError(clientErr.message); setLoading(false); return }
+    if (clientErr) {
+      if (clientErr.code === '23505') {
+        setError('A client with this CIN already exists in your account.')
+      } else {
+        setError(clientErr.message)
+      }
+      setLoading(false); return
+    }
 
     const validDirs = directors.filter(d => d.name && d.din)
     if (validDirs.length) {
