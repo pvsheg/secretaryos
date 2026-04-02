@@ -10,9 +10,10 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) redirect('/auth')
 
-  const [{ data: client }, { data: documents }] = await Promise.all([
+  const [{ data: client }, { data: documents }, { count: docCount }] = await Promise.all([
     supabase.from('clients').select('*, directors(*)').eq('id', params.id).single(),
-    supabase.from('documents').select('*').eq('client_id', params.id).order('created_at', { ascending: false }),
+    supabase.from('documents').select('*').eq('client_id', params.id).eq('user_id', session.user.id).order('created_at', { ascending: false }),
+    supabase.from('documents').select('*', { count: 'exact', head: true }).eq('client_id', params.id).eq('user_id', session.user.id),
   ])
 
   if (!client) notFound()
@@ -73,7 +74,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                   { label: 'Paid-up capital', val: client.paid_up_capital || 'Not set' },
                   { label: 'ROC code', val: (client as any).roc_code || 'Not set' },
                   { label: 'Listing status', val: (client as any).listing_status || 'Unlisted' },
-                  { label: 'Documents generated', val: documents?.length || 0 },
+                  { label: 'Documents generated', val: docCount ?? 0 },
                 ].map(item => (
                   <div key={item.label}>
                     <p className="text-xs text-slate-400">{item.label}</p>
