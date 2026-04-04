@@ -180,7 +180,7 @@ export default function NewClientPage() {
     const clientData = {
       user_id: session.user.id,
       company_name: form.company_name,
-      cin: form.cin,
+      cin: form.cin.trim().toUpperCase(),
       registered_office: form.registered_office,
       financial_year_end: form.financial_year_end,
       company_type: form.company_type,
@@ -197,10 +197,30 @@ export default function NewClientPage() {
       mca_last_synced: fetchOk ? new Date().toISOString() : null,
     }
 
+    // Check for duplicate CIN before inserting
+    const { data: existing } = await supabase
+      .from('clients')
+      .select('id, company_name')
+      .eq('user_id', session.user.id)
+      .eq('cin', form.cin.trim().toUpperCase())
+      .single()
+
+    if (existing) {
+      setError(`A client with this CIN already exists: "${existing.company_name}". Each company can only be added once.`)
+      setLoading(false); return
+    }
+
     const { data: client, error: clientErr } = await supabase
       .from('clients').insert(clientData).select().single()
 
-    if (clientErr) { setError(clientErr.message); setLoading(false); return }
+    if (clientErr) {
+      if (clientErr.code === '23505') {
+        setError('A client with this CIN already exists in your account.')
+      } else {
+        setError(clientErr.message)
+      }
+      setLoading(false); return
+    }
 
     const validDirs = directors.filter(d => d.name && d.din)
     if (validDirs.length) {
@@ -227,7 +247,18 @@ export default function NewClientPage() {
         </div>
 
         <h1 className="font-serif text-3xl font-bold text-ink mb-2">Add client company</h1>
-        <p className="text-slate-500 text-sm mb-8">Search by company name or enter CIN — all MCA data loads automatically.</p>
+        <p className="text-slate-500 text-sm mb-4">Search by company name or enter CIN — all MCA data loads automatically.</p>
+
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3 mb-6">
+          <span className="text-amber-500 flex-shrink-0 mt-0.5">⚠</span>
+          <p className="text-xs text-amber-800 leading-relaxed">
+            MCA data may not always be up to date. Please cross-check company details, capital structure, and especially director information against the{' '}
+            <a href="https://www.mca.gov.in/content/mca/global/en/mca/master-data/MDS.html" target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-2">
+              MCA Master Data portal
+            </a>{' '}
+            before saving.
+          </p>
+        </div>
 
         {error && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-600 mb-6">{error}</div>}
 
