@@ -236,7 +236,7 @@ function getDefaultTemplate(isDemo: boolean = false): string {
 }
 #let doc_notice_sig(name: "", designation: "", din: "", date: "", place: "") = {
   v(24pt); line(length: 100%, stroke: 0.5pt + rgb("#dddddd")); v(12pt)
-  [#set text(size: 9.5pt); *FOR THE COMPANY* #v(24pt) #line(length: 40%, stroke: 0.5pt + black) #v(3pt) Name: #name \\ Designation: #designation \\ DIN: #din \\ Date: #date \\ Place: #place]
+  [#set text(size: 9.5pt); #v(24pt) #line(length: 40%, stroke: 0.5pt + black) #v(3pt) *#name* \\ #designation \\ DIN: #din]
 }
 `.trim()
 }

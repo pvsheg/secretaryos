@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import Navbar from '@/components/Navbar'
@@ -66,17 +66,49 @@ function Spinner() {
 }
 
 function DocPreview({ content, onDownload, downloading }: {
-  content: string; onDownload: () => void; downloading: boolean
+  content: string; onDownload: (html: string) => void; downloading: boolean
 }) {
+  const [editing, setEditing] = useState(false)
+  const [savedContent, setSavedContent] = useState(content)
+  const divRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => { setSavedContent(content) }, [content])
+  useEffect(() => { if (divRef.current) divRef.current.innerHTML = savedContent }, [savedContent])
+
+  function saveEdit() {
+    const html = divRef.current?.innerHTML || savedContent
+    setSavedContent(html)
+    setEditing(false)
+  }
+  function cancelEdit() {
+    if (divRef.current) divRef.current.innerHTML = savedContent
+    setEditing(false)
+  }
+
   return (
     <div className="mt-4 bg-white border border-slate-100 rounded-xl overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2 bg-slate-50/60 border-b border-slate-50">
+        <span className="text-xs text-slate-400">{editing ? 'Click any text to edit' : 'Document preview'}</span>
+        <div className="flex gap-2 items-center">
+          {editing ? (
+            <>
+              <button onClick={saveEdit} className="text-xs font-semibold text-teal hover:text-teal-dark transition-colors">Save changes</button>
+              <button onClick={cancelEdit} className="text-xs text-slate-400 hover:text-ink transition-colors">Cancel</button>
+            </>
+          ) : (
+            <button onClick={() => setEditing(true)} className="text-xs font-medium text-slate-500 hover:text-ink transition-colors">✎ Edit</button>
+          )}
+        </div>
+      </div>
       <div
-        className="p-5 max-h-80 overflow-y-auto doc-preview text-sm"
-        dangerouslySetInnerHTML={{ __html: content }}
+        ref={divRef}
+        className={`p-5 max-h-80 overflow-y-auto doc-preview text-sm focus:outline-none ${editing ? 'bg-amber-50/10 cursor-text' : ''}`}
+        contentEditable={editing}
+        suppressContentEditableWarning
       />
       <div className="border-t border-slate-100 px-4 py-3">
         <button
-          onClick={onDownload}
+          onClick={() => onDownload(savedContent)}
           disabled={downloading}
           className="w-full py-2.5 bg-ink text-white rounded-lg text-xs font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
         >
@@ -118,7 +150,7 @@ export default function MeetingDetailPage() {
   const [noticeError, setNoticeError] = useState('')
 
   // Agenda form
-  const [selectedAgendaKeys, setSelectedAgendaKeys] = useState<string[]>([])
+  const [selectedAgendaItems, setSelectedAgendaItems] = useState<{ key: string; notes: string; notesOpen: boolean }[]>([])
   const [agendaSpecial, setAgendaSpecial] = useState('')
   const [agendaPending, setAgendaPending] = useState(false)
   const [agendaError, setAgendaError] = useState('')
@@ -221,13 +253,16 @@ export default function MeetingDetailPage() {
   }
 
   async function generateAgenda() {
-    if (selectedAgendaKeys.length === 0) { setAgendaError('Select at least one agenda item.'); return }
+    if (selectedAgendaItems.length === 0) { setAgendaError('Add at least one agenda item.'); return }
     setAgendaPending(true); setAgendaError('')
     try {
       const res = await fetch(`/api/meetings/${meetingId}/agenda`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agenda_items: selectedAgendaKeys, special_instructions: agendaSpecial }),
+        body: JSON.stringify({
+          agenda_items: selectedAgendaItems.map(({ key, notes }) => ({ key, notes })),
+          special_instructions: agendaSpecial,
+        }),
       })
       const data = await res.json()
       if (!res.ok) { setAgendaError(data.error || 'Generation failed'); return }
@@ -269,7 +304,7 @@ export default function MeetingDetailPage() {
     } finally { setDeletePending('') }
   }
 
-  async function downloadPDF(doc: MeetingDoc) {
+  async function downloadPDF(doc: MeetingDoc, htmlOverride?: string) {
     setDownloading(doc.doc_subtype)
     try {
       const { generatePDF } = await import('@/lib/pdf-generator')
@@ -286,14 +321,32 @@ export default function MeetingDetailPage() {
         meta.signatoryDesignation = doc.metadata.signatory_designation || ''
         meta.signatoryDin = doc.metadata.signatory_din || ''
       }
-      await generatePDF(doc.content, fileName, meta)
+      await generatePDF(htmlOverride ?? doc.content, fileName, meta)
     } catch (err) {
       console.error('PDF error:', err)
     } finally { setDownloading('') }
   }
 
-  function toggleAgendaKey(key: string) {
-    setSelectedAgendaKeys(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key])
+  function addAgendaItem(key: string) {
+    setSelectedAgendaItems(prev => prev.some(i => i.key === key) ? prev : [...prev, { key, notes: '', notesOpen: false }])
+  }
+  function removeAgendaItem(idx: number) {
+    setSelectedAgendaItems(prev => prev.filter((_, i) => i !== idx))
+  }
+  function moveAgendaItem(idx: number, dir: -1 | 1) {
+    setSelectedAgendaItems(prev => {
+      const next = [...prev]
+      const target = idx + dir
+      if (target < 0 || target >= next.length) return prev;
+      [next[idx], next[target]] = [next[target], next[idx]]
+      return next
+    })
+  }
+  function updateAgendaItemNotes(idx: number, notes: string) {
+    setSelectedAgendaItems(prev => prev.map((item, i) => i === idx ? { ...item, notes } : item))
+  }
+  function toggleAgendaItemNotes(idx: number) {
+    setSelectedAgendaItems(prev => prev.map((item, i) => i === idx ? { ...item, notesOpen: !item.notesOpen } : item))
   }
   function togglePresent(id: string) {
     setMinutesPresent(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
@@ -512,7 +565,7 @@ export default function MeetingDetailPage() {
               {previewDoc === 'notice' && noticeDoc && !showNoticeForm && (
                 <DocPreview
                   content={noticeDoc.content}
-                  onDownload={() => downloadPDF(noticeDoc)}
+                  onDownload={(html) => downloadPDF(noticeDoc, html)}
                   downloading={downloading === 'notice'}
                 />
               )}
@@ -567,26 +620,75 @@ export default function MeetingDetailPage() {
 
               {showAgendaForm && (
                 <div className="space-y-4 mt-2 pt-4 border-t border-slate-50">
+
+                  {/* ── Library picker ── */}
                   <div>
-                    <label className={labelCls}>Agenda items <span className="normal-case font-normal text-slate-400">— select all that apply</span></label>
-                    <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                      {Object.entries(AGENDA_LIBRARY).map(([key, item]) => (
-                        <button key={key} type="button" onClick={() => toggleAgendaKey(key)}
-                          className={`w-full flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${selectedAgendaKeys.includes(key) ? 'border-ink bg-ink/5' : 'border-slate-100 hover:border-slate-200 bg-white'}`}>
-                          <div className={`w-4 h-4 rounded border-2 flex-shrink-0 mt-0.5 flex items-center justify-center ${selectedAgendaKeys.includes(key) ? 'bg-ink border-ink' : 'border-slate-300'}`}>
-                            {selectedAgendaKeys.includes(key) && <span className="text-white text-xs">✓</span>}
-                          </div>
-                          <div>
-                            <div className="text-xs font-medium text-ink">{item.label}</div>
-                            <div className="text-xs text-slate-400 mt-0.5">{item.sections.join(' · ')}</div>
-                          </div>
-                        </button>
-                      ))}
+                    <label className={labelCls}>Add agenda items <span className="normal-case font-normal text-slate-400">— click to add</span></label>
+                    <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                      {Object.entries(AGENDA_LIBRARY).map(([key, item]) => {
+                        const alreadyAdded = selectedAgendaItems.some(i => i.key === key)
+                        return (
+                          <button key={key} type="button" onClick={() => addAgendaItem(key)} disabled={alreadyAdded}
+                            className={`w-full flex items-start gap-3 p-2.5 rounded-lg border text-left transition-all ${alreadyAdded ? 'border-slate-100 bg-slate-50 opacity-40 cursor-default' : 'border-slate-100 hover:border-teal hover:bg-teal/5 bg-white'}`}>
+                            <span className={`mt-0.5 flex-shrink-0 text-xs font-bold ${alreadyAdded ? 'text-green-500' : 'text-teal'}`}>{alreadyAdded ? '✓' : '+'}</span>
+                            <div>
+                              <div className="text-xs font-medium text-ink">{item.label}</div>
+                              <div className="text-xs text-slate-400 mt-0.5">{item.sections.join(' · ')}</div>
+                            </div>
+                          </button>
+                        )
+                      })}
                     </div>
-                    {selectedAgendaKeys.length > 0 && (
-                      <p className="text-xs text-slate-500 mt-2">{selectedAgendaKeys.length} item{selectedAgendaKeys.length > 1 ? 's' : ''} selected</p>
-                    )}
                   </div>
+
+                  {/* ── Selected items (ordered, with notes) ── */}
+                  {selectedAgendaItems.length > 0 && (
+                    <div>
+                      <label className={labelCls}>Selected agenda ({selectedAgendaItems.length} item{selectedAgendaItems.length > 1 ? 's' : ''}) <span className="normal-case font-normal text-slate-400">— drag to reorder</span></label>
+                      <div className="space-y-2">
+                        {selectedAgendaItems.map((item, idx) => {
+                          const lib = AGENDA_LIBRARY[item.key]
+                          return (
+                            <div key={item.key} className="border border-slate-200 rounded-xl bg-white overflow-hidden">
+                              <div className="flex items-start gap-2 p-3">
+                                {/* Order number */}
+                                <span className="w-5 h-5 rounded-full bg-ink text-white text-xs flex items-center justify-center font-semibold flex-shrink-0 mt-0.5">{idx + 1}</span>
+                                {/* Label */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs font-medium text-ink">{lib?.label || item.key}</div>
+                                  <div className="text-xs text-slate-400">{lib?.sections.join(' · ')}</div>
+                                </div>
+                                {/* Controls */}
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  <button type="button" onClick={() => moveAgendaItem(idx, -1)} disabled={idx === 0}
+                                    className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-ink hover:bg-slate-100 transition-colors disabled:opacity-20 text-xs">↑</button>
+                                  <button type="button" onClick={() => moveAgendaItem(idx, 1)} disabled={idx === selectedAgendaItems.length - 1}
+                                    className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-ink hover:bg-slate-100 transition-colors disabled:opacity-20 text-xs">↓</button>
+                                  <button type="button" onClick={() => toggleAgendaItemNotes(idx)}
+                                    className={`w-6 h-6 flex items-center justify-center rounded transition-colors text-xs ${item.notesOpen ? 'text-teal bg-teal/10' : 'text-slate-400 hover:text-ink hover:bg-slate-100'}`}
+                                    title="Add notes">✎</button>
+                                  <button type="button" onClick={() => removeAgendaItem(idx)}
+                                    className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors text-xs">✕</button>
+                                </div>
+                              </div>
+                              {item.notesOpen && (
+                                <div className="px-3 pb-3 pt-0 border-t border-slate-50">
+                                  <textarea
+                                    className="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-slate-50 resize-none"
+                                    rows={2}
+                                    placeholder="Optional notes / drafting instructions for this agenda item..."
+                                    value={item.notes}
+                                    onChange={e => updateAgendaItemNotes(idx, e.target.value)}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   <div>
                     <label className={labelCls}>Special instructions <span className="normal-case font-normal text-slate-400">(optional)</span></label>
                     <textarea
@@ -612,7 +714,7 @@ export default function MeetingDetailPage() {
               {previewDoc === 'agenda' && agendaDoc && !showAgendaForm && (
                 <DocPreview
                   content={agendaDoc.content}
-                  onDownload={() => downloadPDF(agendaDoc)}
+                  onDownload={(html) => downloadPDF(agendaDoc, html)}
                   downloading={downloading === 'agenda'}
                 />
               )}
@@ -722,7 +824,7 @@ export default function MeetingDetailPage() {
               {previewDoc === 'minutes' && minutesDoc && !showMinutesForm && (
                 <DocPreview
                   content={minutesDoc.content}
-                  onDownload={() => downloadPDF(minutesDoc)}
+                  onDownload={(html) => downloadPDF(minutesDoc, html)}
                   downloading={downloading === 'minutes'}
                 />
               )}
