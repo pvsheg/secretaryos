@@ -1,6 +1,6 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import Navbar from '@/components/Navbar'
 import Link from 'next/link'
@@ -15,8 +15,9 @@ interface Client {
 const inputCls = 'w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 transition-colors bg-gray-50'
 const labelCls = 'block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5'
 
-export default function NewMeetingPage() {
+function NewMeetingForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
 
   const [clients, setClients] = useState<Client[]>([])
@@ -24,7 +25,7 @@ export default function NewMeetingPage() {
   const [error, setError] = useState('')
 
   const [form, setForm] = useState({
-    client_id: '',
+    client_id: searchParams.get('client') || '',
     meeting_date: '',
     meeting_time: '11:00',
     meeting_type: 'board',
@@ -92,6 +93,14 @@ export default function NewMeetingPage() {
         <div className="flex items-center gap-2 text-sm text-slate-400 mb-6">
           <Link href="/meetings" className="hover:text-ink transition-colors">Meetings</Link>
           <span>/</span>
+          {searchParams.get('client') && clients.find(c => c.id === searchParams.get('client')) && (
+            <>
+              <Link href={`/clients/${searchParams.get('client')}`} className="hover:text-ink transition-colors truncate max-w-[160px]">
+                {clients.find(c => c.id === searchParams.get('client'))?.company_name}
+              </Link>
+              <span>/</span>
+            </>
+          )}
           <span className="text-ink">Call a Meeting</span>
         </div>
 
@@ -225,7 +234,8 @@ export default function NewMeetingPage() {
                   'Schedule Meeting'
                 )}
               </button>
-              <Link href="/meetings"
+              <Link
+                href={searchParams.get('client') ? `/clients/${searchParams.get('client')}` : '/meetings'}
                 className="px-5 py-3 border border-slate-200 text-ink text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors">
                 Cancel
               </Link>
@@ -234,5 +244,17 @@ export default function NewMeetingPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function NewMeetingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-app-bg flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-gray-200 border-t-ink rounded-full animate-spin"></div>
+      </div>
+    }>
+      <NewMeetingForm />
+    </Suspense>
   )
 }
