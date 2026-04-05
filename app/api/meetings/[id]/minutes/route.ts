@@ -36,56 +36,73 @@ function formatTime(timeStr: string): string {
   return `${hour}:${String(m).padStart(2, '0')} ${ampm}`
 }
 
-const MINUTES_SYSTEM_PROMPT = `You are SecretaryOS, an expert AI assistant for Indian Company Secretaries. Generate legally precise, complete board meeting minutes under the Companies Act 2013 and Secretarial Standards.
+const MINUTES_SYSTEM_PROMPT = `You are SecretaryOS, an expert AI assistant for Indian Company Secretaries. Generate formal Board Meeting Minutes exactly matching the format of a real CS-drafted Indian board meeting minute.
 
-CRITICAL RULES — NEVER VIOLATE:
-1. NEVER leave placeholder text like "[To be populated...]" or "[Insert here]" — always use the actual data provided
-2. If directors are provided, list every single one with their full name, DIN and designation
-3. If no directors are provided for a section (e.g. leave of absence), OMIT that section entirely — do not show it with a placeholder
-4. Keep resolution text concise — RESOLVED THAT operative text should be 2-4 lines maximum
-5. Do NOT pad with excessive statutory recitals — one brief paragraph of background per resolution is enough
-6. The document must be COMPLETE — never cut off mid-sentence
-7. Never show the generation date — only show the meeting date provided
+CRITICAL RULES:
+1. NEVER leave placeholder text — use only the actual data provided
+2. Complete document — never cut off
+3. Number items with zero-padded 2-digit numbers: 01. 02. 03. etc.
+4. Items 01, 02, 03 are always procedural (Chairperson, Quorum, Leave of Absence) — they come BEFORE the agenda items which start at 04
+5. Every agenda item must have a RESOLVED THAT block
+6. Resolution text goes inside a <p class="doc-resolution"> tag
+7. Use "RESOLVED FURTHER THAT" in <p class="doc-further"> for additional clauses
+8. If RESOLUTION NOTES are provided for an item, incorporate those details into the RESOLVED THAT text
 
-OUTPUT FORMAT — use ONLY these exact HTML classes, no markdown:
-- <p class="doc-title-main"> — main title, centered, bold, uppercase
-- <p class="doc-center"> — company details (name, CIN, address), centered
-- <p class="doc-section"> — section headers e.g. "I. CONSTITUTION OF THE MEETING"
-- <p class="doc-line"> — body text paragraphs
-- <p class="doc-resolution"> — resolution text, always start with <strong>RESOLVED THAT</strong>
-- <p class="doc-further"> — consequential clauses starting with <strong>FURTHER RESOLVED THAT</strong>
-- <div class="doc-sig">...</div> — signature block at the end
+OUTPUT FORMAT — use ONLY these exact HTML classes:
+- <p class="doc-title-main"> — main title (the "MINUTE OF THE..." heading), ALL CAPS
+- <p class="doc-section"> — section headers (PRESENT)
+- <p class="doc-line"> — all body text paragraphs, present list, item titles, context paragraphs
+- <p class="doc-resolution"> — RESOLVED THAT text (start with <strong>RESOLVED THAT</strong>)
+- <p class="doc-further"> — RESOLVED FURTHER THAT text (start with <strong>RESOLVED FURTHER THAT</strong>)
 
-DOCUMENT STRUCTURE — follow this exact order:
-1. Title: MINUTES OF THE MEETING OF THE BOARD OF DIRECTORS
-2. Company name, CIN, registered office, meeting date, venue, convened under Section 173 read with SS-1
-3. I. CONSTITUTION OF THE MEETING — one paragraph
-4. II. NOTICE AND QUORUM — confirm notice per Section 173(3), state quorum fraction per Section 174(1)
-5. III. DIRECTORS PRESENT — list each director: "Name (DIN: XXXXXXXX), Designation — Present in person"
-6. IV. INVITEES — Company Secretary present. Omit if no other invitees.
-7. V. COMMENCEMENT — Chairman called meeting to order
-8. VI. CONFIRMATION OF NOTICE — per Section 173(3) and SS-1 Clause 1.3
-9. VII. CONFIRMATION OF PREVIOUS MINUTES — per Section 118(1) and SS-1 Clause 7.1
-10. VIII. TRANSACTIONS OF BUSINESS — all resolutions, numbered FIRST, SECOND, THIRD
-11. IX. CLOSURE — meeting concluded, minutes to be signed within 30 days per Section 118(1)
-12. Signature block — Chairman left, Company Secretary right
+DOCUMENT STRUCTURE (follow exactly):
 
-RESOLUTION FORMAT:
-<p class="doc-section">FIRST RESOLUTION — [TITLE IN CAPS]</p>
-<p class="doc-line">The Chairman introduced the matter of [brief one line].</p>
-<p class="doc-resolution"><strong>RESOLVED THAT</strong> [operative text — 2-3 lines, cite relevant section].</p>
-<p class="doc-further"><strong>FURTHER RESOLVED THAT</strong> the Company Secretary be authorised to file all required forms with the Registrar of Companies.</p>
+1. Title:
+<p class="doc-title-main">MINUTE OF THE [Nth] BOARD MEETING OF THE BOARD OF DIRECTORS OF [COMPANY NAME] HELD ON [DAY, DATE], AT [TIME] AT [VENUE]-</p>
 
-LEGAL REFERENCES:
-- Section 173: board meeting convening
-- Section 174(1): quorum — one-third or 2 directors, whichever higher
-- Section 118(1): minutes signing within 30 days
-- Section 152/160: director appointment with DIN
-- Section 168 + DIR-12: director resignation within 30 days
-- Section 188: RPT — name abstaining director
-- Section 92 + MGT-7: annual return
-- Section 137 + AOC-4: financial statements
-- SS-1: Secretarial Standard on Board Meetings throughout`
+2. Present section:
+<p class="doc-section">PRESENT</p>
+<p class="doc-line">[Director Name],&nbsp;&nbsp;&nbsp;[Designation]</p>
+(one line per director)
+
+3. Times:
+<p class="doc-line"><strong>Time of Commencement of meeting</strong>&nbsp;&nbsp;&nbsp; [time]</p>
+<p class="doc-line"><strong>Time of Conclusion of Meeting</strong>&nbsp;&nbsp;&nbsp; [time or blank line]</p>
+
+4. PROCEDURAL ITEMS (always items 01, 02, 03):
+
+<p class="doc-line"><strong>01. Chairperson:</strong></p>
+<p class="doc-line">[Chairman Name] was unanimously elected as the Chairperson of the meeting.</p>
+
+<p class="doc-line"><strong>02. Quorum:</strong></p>
+<p class="doc-line">The Chairperson confirmed that the quorum was present, and the meeting commenced at [time].</p>
+
+<p class="doc-line"><strong>03. Grant of Leave of Absence:</strong></p>
+<p class="doc-line">[All Directors were present so no Leave of Absence was granted. / OR list who was absent]</p>
+
+5. AGENDA ITEMS (starting from 04):
+For each agenda item:
+<p class="doc-line"><strong>[NN]. [Item Title]:</strong></p>
+<p class="doc-line">[One sentence context: "The matter of X was placed before the Board."]</p>
+<p class="doc-line">The Board, after due discussion, passed the following resolution unanimously:</p>
+<p class="doc-resolution"><strong>RESOLVED THAT</strong> [operative resolution text incorporating any resolution notes provided].</p>
+(Add <p class="doc-further"><strong>RESOLVED FURTHER THAT</strong> ... only when genuinely needed)
+
+6. Second-to-last item:
+<p class="doc-line"><strong>[NN]. Any Other Business with the Permission of the Chair:</strong></p>
+<p class="doc-line">No additional matters were raised.</p>
+
+7. Last item:
+<p class="doc-line"><strong>[NN]. Vote of Thanks:</strong></p>
+<p class="doc-line">The Chairperson expressed gratitude to the Directors for their active participation and declared the meeting concluded at [conclusion time].</p>
+
+8. Signature:
+<p class="doc-line" style="margin-top:20px;">For <strong>[Company Name]</strong></p>
+<p class="doc-line" style="margin-top:40px;"><strong>[Chairman Name]</strong><br>Chairperson of the Meeting</p>
+<p class="doc-line" style="margin-top:16px;">Place: _______________</p>
+<p class="doc-line">Date: _______________</p>
+<p class="doc-line">Date of Signing: _______________</p>
+<p class="doc-line">Date of Entering into Minutes Book: _______________</p>`
 
 export async function POST(
   req: NextRequest,
@@ -97,7 +114,7 @@ export async function POST(
     if (!user) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
 
     const body = await req.json()
-    const { directors_present_ids = [], chairman_director_id, place_of_signing } = body
+    const { directors_present_ids = [], chairman_director_id, place_of_signing, resolutions = [], time_of_conclusion = '' } = body
 
     if (!chairman_director_id) {
       return NextResponse.json({ error: 'chairman_director_id is required' }, { status: 400 })
@@ -144,6 +161,17 @@ export async function POST(
     const agendaMeta = agendaDoc?.metadata as any
     const agendaItemsRaw = agendaMeta?.agenda_items || []
 
+    // Fetch meeting number from notice doc
+    const { data: noticeDocForNum } = await supabase
+      .from('documents')
+      .select('metadata')
+      .eq('meeting_id', params.id)
+      .eq('doc_subtype', 'notice')
+      .eq('user_id', user.id)
+      .limit(1)
+      .single()
+    const meetingNumber = (noticeDocForNum?.metadata as any)?.meeting_number || 1
+
     const directorsStr = presentDirectors
       .map((d: any) => `${d.name} (DIN: ${d.din}), ${d.designation}`)
       .join('\n')
@@ -154,42 +182,47 @@ export async function POST(
 
     const agendaLines = Array.isArray(agendaItemsRaw) && agendaItemsRaw.length > 0
       ? agendaItemsRaw.map((item: any, idx: number) => {
-          if (typeof item === 'string') return `${idx + 1}. ${item}`
-          if (item.label) return `${idx + 1}. ${item.label}${item.sections ? ` — ${item.sections.join(', ')}` : ''}`
-          return `${idx + 1}. ${item}`
+          const itemNum = String(idx + 4).padStart(2, '0') // agenda items start at 04 in minutes
+          const resolutionNote = resolutions.find((r: any) => r.idx === idx)?.notes || item.notes || ''
+          let line = ''
+          if (typeof item === 'string') {
+            line = `${itemNum}. ${item}`
+          } else if (item.label) {
+            line = `${itemNum}. ${item.label}${item.sections?.length ? ` — under ${item.sections.join(', ')}` : ''}`
+          } else {
+            line = `${itemNum}. Item ${idx + 1}`
+          }
+          if (resolutionNote) line += `\n   RESOLUTION NOTES: ${resolutionNote}`
+          return line
         }).join('\n')
       : 'General business of the company'
 
-    const userPrompt = `Generate complete, legally precise board meeting minutes using the following details:
+    const userPrompt = `Generate complete board meeting minutes using the following details:
 
 COMPANY DETAILS:
 Company Name: ${client.company_name}
 CIN: ${client.cin}
-Company Class: Private Limited
 Registered Office: ${client.registered_office}
 
 MEETING DETAILS:
+Meeting Number (ordinal): ${meetingNumber}
 Date: ${formatDate(meeting.meeting_date)}
 Time: ${formatTime(meeting.meeting_time)}
 Venue: ${venue}
-Place of signing: ${signingPlace}
+Time of Conclusion: ${time_of_conclusion || '_______________'}
+Place of Signing: ${signingPlace}
 
-CHAIRMAN: ${chairman?.name || 'Director'} (DIN: ${chairman?.din || 'N/A'}), ${chairman?.designation || 'Director'}
+CHAIRMAN: ${chairman?.name || 'Director'} (DIN: ${chairman?.din || ''}), ${chairman?.designation || 'Director'}
 
-DIRECTORS PRESENT (use these exact names and DINs — never leave as placeholder):
+DIRECTORS PRESENT (list every one exactly):
 ${directorsStr || 'No directors listed'}
 
 QUORUM: ${quorumNote}
 
-AGENDA ITEMS:
+AGENDA ITEMS (items 04 onwards — 01/02/03 are always procedural):
 ${agendaLines}
 
-RULES:
-- Fill ALL sections with actual data — never write "[To be populated]" or similar
-- Keep each resolution concise — RESOLVED THAT text 2-3 lines only
-- Omit any section that has no data
-- Document MUST be complete — do not cut off
-- Output clean HTML only using the specified CSS classes`
+Output clean HTML only using the specified CSS classes. Follow the document structure exactly.`
 
     const agendaCount = Array.isArray(agendaItemsRaw) ? agendaItemsRaw.length : 1
     const maxTokens = Math.min(1800 + agendaCount * 400, 4000)

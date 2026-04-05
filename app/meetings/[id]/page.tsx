@@ -163,6 +163,8 @@ export default function MeetingDetailPage() {
   const [minutesChairman, setMinutesChairman] = useState('')
   const [minutesPresent, setMinutesPresent] = useState<string[]>([])
   const [minutesPlace, setMinutesPlace] = useState('')
+  const [minutesConclusion, setMinutesConclusion] = useState('')
+  const [minutesResolutions, setMinutesResolutions] = useState<Record<number, string>>({})
   const [minutesPending, setMinutesPending] = useState(false)
   const [minutesError, setMinutesError] = useState('')
 
@@ -297,6 +299,10 @@ export default function MeetingDetailPage() {
           directors_present_ids: minutesPresent,
           chairman_director_id: minutesChairman,
           place_of_signing: minutesPlace,
+          time_of_conclusion: minutesConclusion || undefined,
+          resolutions: Object.entries(minutesResolutions)
+            .filter(([, notes]) => notes.trim())
+            .map(([idx, notes]) => ({ idx: Number(idx), notes })),
         }),
       })
       const data = await res.json()
@@ -869,6 +875,8 @@ export default function MeetingDetailPage() {
 
               {showMinutesForm && (
                 <div className="space-y-4 mt-2 pt-4 border-t border-slate-50">
+
+                  {/* Chairman */}
                   <div>
                     <label className={labelCls}>Chairman *</label>
                     <select className={inputCls} value={minutesChairman} onChange={e => setMinutesChairman(e.target.value)}>
@@ -878,6 +886,8 @@ export default function MeetingDetailPage() {
                       ))}
                     </select>
                   </div>
+
+                  {/* Directors present */}
                   <div>
                     <label className={labelCls}>Directors present</label>
                     <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
@@ -898,15 +908,50 @@ export default function MeetingDetailPage() {
                       <p className="text-xs text-slate-500 mt-2">{minutesPresent.length} director{minutesPresent.length > 1 ? 's' : ''} selected</p>
                     )}
                   </div>
-                  <div>
-                    <label className={labelCls}>Place of signing</label>
-                    <input
-                      className={inputCls}
-                      value={minutesPlace}
-                      onChange={e => setMinutesPlace(e.target.value)}
-                      placeholder="e.g. Mumbai"
-                    />
+
+                  {/* Resolution notes per agenda item */}
+                  {agendaDoc?.metadata?.agenda_items && (agendaDoc.metadata.agenda_items as any[]).length > 0 && (
+                    <div>
+                      <label className={labelCls}>Resolution notes per agenda item <span className="normal-case font-normal text-slate-400">(optional)</span></label>
+                      <p className="text-xs text-slate-400 mb-2">Add key details — names, amounts, dates — to be woven into each RESOLVED THAT.</p>
+                      <div className="space-y-2">
+                        {(agendaDoc.metadata.agenda_items as any[]).map((item: any, idx: number) => {
+                          const lib = AGENDA_LIBRARY[typeof item === 'string' ? item : item?.key]
+                          const label = lib?.label || (typeof item === 'object' ? item?.label : item) || `Item ${idx + 1}`
+                          const itemNum = String(idx + 4).padStart(2, '0')
+                          return (
+                            <div key={idx} className="border border-slate-100 rounded-lg overflow-hidden">
+                              <div className="px-3 py-2 bg-slate-50 border-b border-slate-100">
+                                <span className="text-xs font-semibold text-ink">{itemNum}. {label}</span>
+                              </div>
+                              <div className="p-2">
+                                <textarea
+                                  className="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white resize-none"
+                                  rows={2}
+                                  placeholder="e.g. Appoint John Smith (DIN 12345678) as Additional Director w.e.f. 1st April 2024..."
+                                  value={minutesResolutions[idx] || ''}
+                                  onChange={e => setMinutesResolutions(prev => ({ ...prev, [idx]: e.target.value }))}
+                                />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Place and time */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelCls}>Place of signing</label>
+                      <input className={inputCls} value={minutesPlace} onChange={e => setMinutesPlace(e.target.value)} placeholder="e.g. Mumbai" />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Time of conclusion</label>
+                      <input type="time" className={inputCls} value={minutesConclusion} onChange={e => setMinutesConclusion(e.target.value)} />
+                    </div>
                   </div>
+
                   {minutesError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2.5">{minutesError}</p>}
                   <div className="flex gap-2">
                     <button onClick={generateMinutes} disabled={minutesPending}

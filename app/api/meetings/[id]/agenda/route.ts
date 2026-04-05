@@ -37,28 +37,35 @@ function formatTime(timeStr: string): string {
   return `${hour}:${String(m).padStart(2, '0')} ${ampm}`
 }
 
-const AGENDA_SYSTEM_PROMPT = `You are SecretaryOS, an expert AI assistant for Indian Company Secretaries. Generate a formal Board Meeting Agenda under the Companies Act 2013 and Secretarial Standard SS-1.
+const AGENDA_SYSTEM_PROMPT = `You are SecretaryOS, an expert AI assistant for Indian Company Secretaries. Generate a formal Board Meeting Agenda exactly matching the format below.
 
 CRITICAL RULES:
 1. NEVER leave placeholder text — use only the actual data provided
 2. Complete document — never cut off
-3. Number agenda items sequentially
-4. For each item cite the relevant statutory section
-5. If an item has a Note (shown as "Note: ..."), use those instructions to enrich the resolution language for that specific item — incorporate names, dates, amounts, or other specifics from the note directly into the agenda item text. Do NOT print the note as-is; weave it into formal resolution language.
+3. Number agenda items with zero-padded 2-digit numbers: 01. 02. 03. etc.
+4. Each agenda item has TWO parts: a bold numbered title line, then a plain description paragraph
+5. If an item has DRAFTING INSTRUCTIONS, incorporate those details into the description paragraph
 
 OUTPUT FORMAT — use ONLY these exact HTML classes, no markdown:
-- <p class="doc-title-main"> — title: AGENDA FOR THE MEETING OF THE BOARD OF DIRECTORS
-- <p class="doc-center"> — company name, CIN, registered office
-- <p class="doc-section"> — section headers (e.g. "AGENDA ITEMS")
-- <p class="doc-line"> — meeting details and body text
-- <p class="doc-resolution"> — each numbered agenda item with formal resolution language incorporating any provided notes
+- <p class="doc-title-main"> — company name, ALL CAPS
+- <p class="doc-center"> — (CIN: ...) on first line, then Registered Office, then Email (use <br> between)
+- <p class="doc-line"> — all body text including the meeting title line and each agenda item title/description
+- <p class="doc-section"> — section header: AGENDA ITEMS
+- <div class="doc-notice-sig"> — signature block at end
 
-DOCUMENT STRUCTURE:
-1. Title
-2. Company name, CIN, Registered Office
-3. Meeting details (date, time, venue)
-4. Numbered agenda items with statutory references and enriched resolution language
-5. Note: "Any other business with the permission of the Chair"`
+DOCUMENT STRUCTURE (follow exactly):
+1. <p class="doc-title-main">COMPANY NAME</p>
+2. <p class="doc-center">(CIN: ...)<br>Registered Office: ...<br>Email: ...</p>
+3. <p class="doc-line"><strong>AGENDA FOR THE [Nth] BOARD MEETING OF [COMPANY NAME] TO BE HELD ON [DAY, DATE], AT [TIME] AT [VENUE]-</strong></p>
+4. <p class="doc-section">AGENDA ITEMS</p>
+5. For each item:
+   <p class="doc-line"><strong>01. [Item Title]</strong></p>
+   <p class="doc-line">[One paragraph description of what this item covers, incorporating any DRAFTING INSTRUCTIONS]</p>
+6. <p class="doc-line" style="margin-top:20px;">With best regards,</p>
+   <p class="doc-line">For <strong>[Company Name]</strong></p>
+   <div class="doc-notice-sig" style="margin-top:40px;"><div><div class="doc-sig-line"></div><p><strong>[Director Name]</strong></p><p>[Designation]</p><p>DIN: [DIN]</p></div></div>
+
+SIGNATORY: If no signatory is provided, use "Authorised Signatory" as the name with blank DIN.`
 
 export async function POST(
   req: NextRequest,
@@ -135,19 +142,25 @@ COMPANY DETAILS:
 Company Name: ${client.company_name}
 CIN: ${client.cin}
 Registered Office: ${client.registered_office}
+Email: ${(client as any).email || ''}
 
 MEETING DETAILS:
+Meeting Number (ordinal): ${signatoryMeta?.meeting_number ? `${signatoryMeta.meeting_number}` : '1'}
 Date: ${formatDate(meeting.meeting_date)}
 Time: ${formatTime(meeting.meeting_time)}
 Venue: ${venue}
 
-AGENDA ITEMS:
+AGENDA ITEMS (in this exact order):
 ${agendaLines.join('\n') || 'To transact general business of the company'}
 
-${signatoryName ? `SIGNATORY:\nName: ${signatoryName}\nDesignation: ${signatoryDesignation}\nDIN: ${signatoryDin}` : ''}
-${special_instructions ? `\nSPECIAL INSTRUCTIONS:\n${special_instructions}` : ''}
+SIGNATORY:
+Name: ${signatoryName || 'Authorised Signatory'}
+Designation: ${signatoryDesignation || 'Director'}
+DIN: ${signatoryDin || ''}
 
-Generate a complete, formal agenda. Output clean HTML only using the specified CSS classes.`
+${special_instructions ? `SPECIAL INSTRUCTIONS:\n${special_instructions}` : ''}
+
+Output clean HTML only using the specified CSS classes. Follow the document structure exactly.`
 
     const message = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
