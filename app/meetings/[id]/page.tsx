@@ -111,6 +111,9 @@ export default function MeetingDetailPage() {
   const [noticeSignatory, setNoticeSignatory] = useState('')
   const [noticeDate, setNoticeDate] = useState(() => new Date().toISOString().split('T')[0])
   const [meetingNumber, setMeetingNumber] = useState('1')
+  const [noticeSubject, setNoticeSubject] = useState('')
+  const [noticeVenue, setNoticeVenue] = useState('')
+  const [noticeSpecialInstructions, setNoticeSpecialInstructions] = useState('')
   const [noticePending, setNoticePending] = useState(false)
   const [noticeError, setNoticeError] = useState('')
 
@@ -193,13 +196,20 @@ export default function MeetingDetailPage() {
   }
 
   async function generateNotice() {
-    if (!noticeSignatory || !noticeDate || !meetingNumber) { setNoticeError('Please fill all notice fields.'); return }
+    if (!noticeSignatory || !noticeDate || !meetingNumber || !noticeSubject) { setNoticeError('Please fill all notice fields.'); return }
     setNoticePending(true); setNoticeError('')
     try {
       const res = await fetch(`/api/meetings/${meetingId}/notice`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ signatory_director_id: noticeSignatory, date_of_notice: noticeDate, meeting_number: Number(meetingNumber) }),
+        body: JSON.stringify({
+          signatory_director_id: noticeSignatory,
+          date_of_notice: noticeDate,
+          meeting_number: Number(meetingNumber),
+          subject: noticeSubject,
+          venue_override: noticeVenue || undefined,
+          special_instructions: noticeSpecialInstructions || undefined,
+        }),
       })
       const data = await res.json()
       if (!res.ok) { setNoticeError(data.error || 'Generation failed'); return }
@@ -442,6 +452,15 @@ export default function MeetingDetailPage() {
                     </div>
                   </div>
                   <div>
+                    <label className={labelCls}>Subject *</label>
+                    <input
+                      type="text" className={inputCls}
+                      value={noticeSubject}
+                      onChange={e => setNoticeSubject(e.target.value)}
+                      placeholder="e.g. Notice of 1st Board Meeting (of 2024-25) of the Board of Directors"
+                    />
+                  </div>
+                  <div>
                     <label className={labelCls}>Signatory Director *</label>
                     <select className={inputCls} value={noticeSignatory} onChange={e => setNoticeSignatory(e.target.value)}>
                       <option value="">Select signatory...</option>
@@ -449,6 +468,25 @@ export default function MeetingDetailPage() {
                         <option key={d.id} value={d.id}>{d.name} — {d.designation} (DIN: {d.din})</option>
                       ))}
                     </select>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Venue (optional override)</label>
+                    <input
+                      type="text" className={inputCls}
+                      value={noticeVenue}
+                      onChange={e => setNoticeVenue(e.target.value)}
+                      placeholder="Leave blank to use meeting venue"
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Special instructions <span className="normal-case font-normal text-slate-400">(optional)</span></label>
+                    <textarea
+                      className={inputCls}
+                      rows={2}
+                      value={noticeSpecialInstructions}
+                      onChange={e => setNoticeSpecialInstructions(e.target.value)}
+                      placeholder="e.g. Include a specific clause, add a particular note..."
+                    />
                   </div>
                   {noticeError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2.5">{noticeError}</p>}
                   <div className="flex gap-2">

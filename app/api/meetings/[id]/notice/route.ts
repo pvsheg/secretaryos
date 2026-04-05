@@ -75,11 +75,14 @@ function generateNoticeHTML(data: {
   directorName: string
   directorDesignation: string
   directorDin: string
+  subject: string
+  specialInstructions?: string
 }): string {
   const {
     companyName, cin, registeredOffice, email,
     dateOfNotice, meetingDate, meetingTime, venue,
     meetingNumber, directorName, directorDesignation, directorDin,
+    subject, specialInstructions,
   } = data
 
   const fy = financialYear(meetingDate)
@@ -93,7 +96,7 @@ function generateNoticeHTML(data: {
 
 <p class="doc-line" style="margin-top:18px;">To,<br>The Board of Directors<br><strong>${companyName}</strong><br>${registeredOffice}</p>
 
-<p class="doc-line" style="margin-top:14px;"><strong>Sub: Notice of ${mtgOrdinal} Board Meeting (of ${fy.short}) of the Board of Directors</strong></p>
+<p class="doc-line" style="margin-top:14px;"><strong>Sub: ${subject}</strong></p>
 
 <p class="doc-line" style="margin-top:14px;">Dear Directors,</p>
 
@@ -110,7 +113,7 @@ function generateNoticeHTML(data: {
 <p class="doc-line" style="margin-top:10px;">Further, if any Director of the Company is unable to attend the ensuing Board Meeting, they may inform the Board before the date of the meeting by sending a signed leave of absence application.</p>
 
 <p class="doc-line" style="margin-top:10px;">Kindly make it convenient to attend the Meeting. Please acknowledge receipt of this notice.</p>
-
+${specialInstructions ? `\n<p class="doc-line" style="margin-top:10px;">${specialInstructions}</p>` : ''}
 <p class="doc-line" style="margin-top:20px;">With best regards,</p>
 <p class="doc-line">For <strong>${companyName}</strong></p>
 
@@ -135,11 +138,11 @@ export async function POST(
     if (!user) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
 
     const body = await req.json()
-    const { signatory_director_id, date_of_notice, meeting_number } = body
+    const { signatory_director_id, date_of_notice, meeting_number, subject, venue_override, special_instructions } = body
 
-    if (!signatory_director_id || !date_of_notice || !meeting_number) {
+    if (!signatory_director_id || !date_of_notice || !meeting_number || !subject) {
       return NextResponse.json(
-        { error: 'signatory_director_id, date_of_notice and meeting_number are required' },
+        { error: 'signatory_director_id, date_of_notice, meeting_number and subject are required' },
         { status: 400 }
       )
     }
@@ -166,11 +169,13 @@ export async function POST(
 
     if (dirErr || !director) return NextResponse.json({ error: 'Director not found' }, { status: 404 })
 
-    const venue = meeting.venue_type === 'registered_office'
-      ? `Registered Office of the Company at ${client.registered_office}`
-      : meeting.venue_type === 'video'
-        ? 'Video Conference'
-        : meeting.venue_address || client.registered_office
+    const venue = venue_override && venue_override.trim()
+      ? venue_override.trim()
+      : meeting.venue_type === 'registered_office'
+        ? `Registered Office of the Company at ${client.registered_office}`
+        : meeting.venue_type === 'video'
+          ? 'Video Conference'
+          : meeting.venue_address || client.registered_office
 
     const content = generateNoticeHTML({
       companyName: client.company_name,
@@ -185,6 +190,8 @@ export async function POST(
       directorName: director.name,
       directorDesignation: director.designation,
       directorDin: director.din,
+      subject,
+      specialInstructions: special_instructions,
     })
 
     // Delete existing notice for this meeting
@@ -219,6 +226,8 @@ export async function POST(
           signatory_name: director.name,
           signatory_din: director.din,
           signatory_designation: director.designation,
+          subject,
+          ...(special_instructions ? { special_instructions } : {}),
         },
       })
       .select()

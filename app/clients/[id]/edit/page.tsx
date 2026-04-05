@@ -32,6 +32,7 @@ export default function EditClientPage() {
     company_name: '',
     cin: '',
     registered_office: '',
+    email: '',
     financial_year_end: 'March 31',
     company_type: '',
     company_status: 'Active',
@@ -65,6 +66,7 @@ export default function EditClientPage() {
         company_name: client.company_name || '',
         cin: client.cin || '',
         registered_office: client.registered_office || '',
+        email: (client as any).email || '',
         financial_year_end: client.financial_year_end || 'March 31',
         company_type: (client as any).company_type || '',
         company_status: (client as any).company_status || 'Active',
@@ -109,6 +111,7 @@ export default function EditClientPage() {
         company_name: form.company_name,
         cin: form.cin,
         registered_office: form.registered_office,
+        email: form.email,
         financial_year_end: form.financial_year_end,
         company_type: form.company_type,
         company_status: form.company_status,
@@ -200,6 +203,10 @@ export default function EditClientPage() {
               <div>
                 <label className={labelCls}>Registered office address *</label>
                 <textarea className={`${inputCls} resize-none`} rows={2} value={form.registered_office} onChange={e => updateForm('registered_office', e.target.value)} required />
+              </div>
+              <div>
+                <label className={labelCls}>Company email</label>
+                <input className={inputCls} type="email" value={form.email} onChange={e => updateForm('email', e.target.value)} placeholder="info@company.com" />
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>

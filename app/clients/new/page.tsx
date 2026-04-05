@@ -44,6 +44,7 @@ export default function NewClientPage() {
     company_name: '',
     cin: '',
     registered_office: '',
+    email: '',
     financial_year_end: 'March 31',
     company_type: '',       // company_class from MCA
     company_status: 'Active',
@@ -182,6 +183,7 @@ export default function NewClientPage() {
       company_name: form.company_name,
       cin: form.cin.trim().toUpperCase(),
       registered_office: form.registered_office,
+      email: form.email,
       financial_year_end: form.financial_year_end,
       company_type: form.company_type,
       company_status: form.company_status,
@@ -340,6 +342,10 @@ export default function NewClientPage() {
               <div>
                 <label className={labelCls}>Registered office address *</label>
                 <textarea className={`${inputCls} resize-none`} rows={2} value={form.registered_office} onChange={e => updateForm('registered_office', e.target.value)} placeholder="4th Floor, Prestige Tower, MG Road, Bengaluru — 560001" required />
+              </div>
+              <div>
+                <label className={labelCls}>Company email</label>
+                <input className={inputCls} type="email" value={form.email} onChange={e => updateForm('email', e.target.value)} placeholder="info@company.com" />
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
