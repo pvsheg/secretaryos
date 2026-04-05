@@ -196,7 +196,7 @@ export default function MeetingDetailPage() {
   }
 
   async function generateNotice() {
-    if (!noticeSignatory || !noticeDate || !meetingNumber || !noticeSubject) { setNoticeError('Please fill all notice fields.'); return }
+    if (!noticeDate || !meetingNumber || !noticeSubject) { setNoticeError('Please fill all notice fields.'); return }
     setNoticePending(true); setNoticeError('')
     try {
       const res = await fetch(`/api/meetings/${meetingId}/notice`, {
@@ -274,13 +274,19 @@ export default function MeetingDetailPage() {
     try {
       const { generatePDF } = await import('@/lib/pdf-generator')
       const fileName = `${client?.company_name?.replace(/[^a-z0-9]/gi, '_') || 'doc'}_${doc.doc_subtype}_${meeting?.meeting_date || ''}`
-      await generatePDF(doc.content, fileName, {
+      const meta: import('@/lib/pdf-generator').PDFMetadata = {
         companyName: client?.company_name || '',
         docType: doc.doc_subtype,
         meetingDate: meeting?.meeting_date || '',
         cin: client?.cin || '',
         customTemplate: null,
-      })
+      }
+      if (doc.doc_subtype === 'notice' && doc.metadata) {
+        meta.signatoryName = doc.metadata.signatory_name || ''
+        meta.signatoryDesignation = doc.metadata.signatory_designation || ''
+        meta.signatoryDin = doc.metadata.signatory_din || ''
+      }
+      await generatePDF(doc.content, fileName, meta)
     } catch (err) {
       console.error('PDF error:', err)
     } finally { setDownloading('') }
@@ -461,7 +467,7 @@ export default function MeetingDetailPage() {
                     />
                   </div>
                   <div>
-                    <label className={labelCls}>Signatory Director *</label>
+                    <label className={labelCls}>Signatory Director <span className="normal-case font-normal text-slate-400">(optional)</span></label>
                     <select className={inputCls} value={noticeSignatory} onChange={e => setNoticeSignatory(e.target.value)}>
                       <option value="">Select signatory...</option>
                       {directors.map(d => (

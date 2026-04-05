@@ -11,6 +11,9 @@ export interface PDFMetadata {
   chairmanDin?: string
   csName?: string
   csMembership?: string
+  signatoryName?: string
+  signatoryDesignation?: string
+  signatoryDin?: string
   customTemplate?: string | null
 }
 
@@ -58,6 +61,9 @@ export async function generatePDF(
         chairmanDin: metadata.chairmanDin,
         csName: metadata.csName,
         csMembership: metadata.csMembership,
+        signatoryName: metadata.signatoryName,
+        signatoryDesignation: metadata.signatoryDesignation,
+        signatoryDin: metadata.signatoryDin,
         customTemplate: metadata.customTemplate || null,
       }),
     })

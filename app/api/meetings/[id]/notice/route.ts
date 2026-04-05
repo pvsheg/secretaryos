@@ -117,7 +117,7 @@ ${specialInstructions ? `\n<p class="doc-line" style="margin-top:10px;">${specia
 <p class="doc-line" style="margin-top:20px;">With best regards,</p>
 <p class="doc-line">For <strong>${companyName}</strong></p>
 
-<div class="doc-sig" style="margin-top:40px;">
+<div class="doc-notice-sig" style="margin-top:40px;">
   <div>
     <div class="doc-sig-line"></div>
     <p><strong>${directorName}</strong></p>
@@ -140,9 +140,9 @@ export async function POST(
     const body = await req.json()
     const { signatory_director_id, date_of_notice, meeting_number, subject, venue_override, special_instructions } = body
 
-    if (!signatory_director_id || !date_of_notice || !meeting_number || !subject) {
+    if (!date_of_notice || !meeting_number || !subject) {
       return NextResponse.json(
-        { error: 'signatory_director_id, date_of_notice, meeting_number and subject are required' },
+        { error: 'date_of_notice, meeting_number and subject are required' },
         { status: 400 }
       )
     }
@@ -159,15 +159,18 @@ export async function POST(
 
     const client = meeting.clients as any
 
-    // Fetch signatory director
-    const { data: director, error: dirErr } = await supabase
-      .from('directors')
-      .select('id, name, din, designation, email')
-      .eq('id', signatory_director_id)
-      .eq('client_id', client.id)
-      .single()
-
-    if (dirErr || !director) return NextResponse.json({ error: 'Director not found' }, { status: 404 })
+    // Fetch signatory director (optional)
+    let director: { name: string; din: string; designation: string } | null = null
+    if (signatory_director_id) {
+      const { data: dir, error: dirErr } = await supabase
+        .from('directors')
+        .select('id, name, din, designation, email')
+        .eq('id', signatory_director_id)
+        .eq('client_id', client.id)
+        .single()
+      if (dirErr || !dir) return NextResponse.json({ error: 'Director not found' }, { status: 404 })
+      director = dir
+    }
 
     const venue = venue_override && venue_override.trim()
       ? venue_override.trim()
@@ -187,9 +190,9 @@ export async function POST(
       meetingTime: meeting.meeting_time,
       venue,
       meetingNumber: Number(meeting_number),
-      directorName: director.name,
-      directorDesignation: director.designation,
-      directorDin: director.din,
+      directorName: director?.name || '',
+      directorDesignation: director?.designation || '',
+      directorDin: director?.din || '',
       subject,
       specialInstructions: special_instructions,
     })
@@ -215,7 +218,7 @@ export async function POST(
         type: 'board_notice',
         title,
         content,
-        signatory_director_id,
+        ...(signatory_director_id ? { signatory_director_id } : {}),
         metadata: {
           meeting_date: meeting.meeting_date,
           meeting_time: meeting.meeting_time,
@@ -223,9 +226,11 @@ export async function POST(
           date_of_notice,
           meeting_number: Number(meeting_number),
           financial_year: fy.short,
-          signatory_name: director.name,
-          signatory_din: director.din,
-          signatory_designation: director.designation,
+          ...(director ? {
+            signatory_name: director.name,
+            signatory_din: director.din,
+            signatory_designation: director.designation,
+          } : {}),
           subject,
           ...(special_instructions ? { special_instructions } : {}),
         },
