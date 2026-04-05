@@ -44,19 +44,20 @@ CRITICAL RULES:
 2. Complete document — never cut off
 3. Number agenda items sequentially
 4. For each item cite the relevant statutory section
+5. If an item has a Note (shown as "Note: ..."), use those instructions to enrich the resolution language for that specific item — incorporate names, dates, amounts, or other specifics from the note directly into the agenda item text. Do NOT print the note as-is; weave it into formal resolution language.
 
 OUTPUT FORMAT — use ONLY these exact HTML classes, no markdown:
 - <p class="doc-title-main"> — title: AGENDA FOR THE MEETING OF THE BOARD OF DIRECTORS
 - <p class="doc-center"> — company name, CIN, registered office
 - <p class="doc-section"> — section headers (e.g. "AGENDA ITEMS")
 - <p class="doc-line"> — meeting details and body text
-- <p class="doc-resolution"> — each numbered agenda item, e.g. "1. [Item label] — [Sections]"
+- <p class="doc-resolution"> — each numbered agenda item with formal resolution language incorporating any provided notes
 
 DOCUMENT STRUCTURE:
 1. Title
 2. Company name, CIN, Registered Office
 3. Meeting details (date, time, venue)
-4. Numbered agenda items with statutory references
+4. Numbered agenda items with statutory references and enriched resolution language
 5. Note: "Any other business with the permission of the Chair"`
 
 export async function POST(
@@ -103,7 +104,6 @@ export async function POST(
     if (Array.isArray(agenda_items)) {
       agenda_items.forEach((item: any, idx: number) => {
         if (typeof item === 'string') {
-          // key lookup
           const lib = AGENDA_LIBRARY[item]
           if (lib) {
             agendaLines.push(`${idx + 1}. ${lib.label} — under ${lib.sections.join(', ')}`)
@@ -113,10 +113,13 @@ export async function POST(
         } else if (item && item.key) {
           const lib = AGENDA_LIBRARY[item.key]
           if (lib) {
-            agendaLines.push(`${idx + 1}. ${lib.label} — under ${lib.sections.join(', ')}${item.notes ? ` (Note: ${item.notes})` : ''}`)
+            const noteLine = item.notes ? `\n   DRAFTING INSTRUCTIONS: ${item.notes}` : ''
+            agendaLines.push(`${idx + 1}. ${lib.label} — under ${lib.sections.join(', ')}${noteLine}`)
           }
         } else if (item && item.label) {
-          agendaLines.push(`${idx + 1}. ${item.label}${item.sections ? ` — under ${item.sections.join(', ')}` : ''}${item.notes ? ` (Note: ${item.notes})` : ''}`)
+          const sections = Array.isArray(item.sections) ? item.sections : []
+          const noteLine = item.notes ? `\n   DRAFTING INSTRUCTIONS: ${item.notes}` : ''
+          agendaLines.push(`${idx + 1}. ${item.label}${sections.length ? ` — under ${sections.join(', ')}` : ''}${noteLine}`)
         }
       })
     }
