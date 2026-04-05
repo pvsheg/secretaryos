@@ -111,7 +111,7 @@ export function htmlToTypst(html: string, meta: TypstDocMetadata): string {
         typstLines.push(`)`)
         break
       case 'notice-sig':
-        typstLines.push(`#doc-notice-sig(`)
+        typstLines.push(`#doc_notice_sig(`)
         typstLines.push(`  name: "${escapeStr(meta.signatory_name || '')}",`)
         typstLines.push(`  designation: "${escapeStr(meta.signatory_designation || '')}",`)
         typstLines.push(`  din: "${escapeStr(meta.signatory_din || '')}",`)

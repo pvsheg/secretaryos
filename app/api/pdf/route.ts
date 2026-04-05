@@ -234,7 +234,7 @@ function getDefaultTemplate(isDemo: boolean = false): string {
     [#set text(size: 9.5pt); *COMPANY SECRETARY* #v(24pt) #line(length: 80%, stroke: 0.5pt + black) #v(3pt) Name: #cs_name \\ Membership No.: #cs_membership \\ Date: #date \\ Place: #place]
   )
 }
-#let doc-notice-sig(name: "", designation: "", din: "", date: "", place: "") = {
+#let doc_notice_sig(name: "", designation: "", din: "", date: "", place: "") = {
   v(24pt); line(length: 100%, stroke: 0.5pt + rgb("#dddddd")); v(12pt)
   [#set text(size: 9.5pt); *FOR THE COMPANY* #v(24pt) #line(length: 40%, stroke: 0.5pt + black) #v(3pt) Name: #name \\ Designation: #designation \\ DIN: #din \\ Date: #date \\ Place: #place]
 }
