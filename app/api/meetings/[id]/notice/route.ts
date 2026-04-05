@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 function getSupabase() {
   const cookieStore = cookies()
@@ -20,43 +17,113 @@ function getSupabase() {
   )
 }
 
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr)
-  const day = d.getUTCDate()
-  const suffix = day === 1 || day === 21 || day === 31 ? 'st' : day === 2 || day === 22 ? 'nd' : day === 3 || day === 23 ? 'rd' : 'th'
-  const month = d.toLocaleDateString('en-IN', { month: 'long', timeZone: 'UTC' })
-  const year = d.getUTCFullYear()
-  return `${day}${suffix} day of ${month}, ${year}`
+// "5" → "5th", "1" → "1st", etc.
+function ordinal(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd']
+  const v = n % 100
+  return n + (s[(v - 20) % 10] || s[v] || s[0])
 }
 
+// "2024-04-05" → "5th April 2024"
+function formatNoticeDate(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00Z')
+  const day = d.getUTCDate()
+  const month = d.toLocaleDateString('en-IN', { month: 'long', timeZone: 'UTC' })
+  const year = d.getUTCFullYear()
+  return `${ordinal(day)} ${month} ${year}`
+}
+
+// "2024-04-05" → "Friday, 5th April 2024"
+function formatMeetingDate(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00Z')
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+  const dayName = days[d.getUTCDay()]
+  return `${dayName}, ${formatNoticeDate(dateStr)}`
+}
+
+// "11:00" → "11:00 AM"
 function formatTime(timeStr: string): string {
   const [h, m] = timeStr.split(':').map(Number)
-  const ampm = h >= 12 ? 'P.M.' : 'A.M.'
+  const ampm = h >= 12 ? 'PM' : 'AM'
   const hour = h % 12 || 12
   return `${hour}:${String(m).padStart(2, '0')} ${ampm}`
 }
 
-const NOTICE_SYSTEM_PROMPT = `You are SecretaryOS, an expert AI assistant for Indian Company Secretaries. Generate a formal Board Meeting Notice under the Companies Act 2013 and Secretarial Standard SS-1.
+// "2024-04-05" → { short: "2024-25", long: "2024-2025" }
+function financialYear(dateStr: string): { short: string; long: string } {
+  const d = new Date(dateStr + 'T00:00:00Z')
+  const month = d.getUTCMonth() + 1 // 1-12
+  const year = d.getUTCFullYear()
+  const fyStart = month >= 4 ? year : year - 1
+  const fyEnd = fyStart + 1
+  return {
+    short: `${fyStart}-${String(fyEnd).slice(2)}`,
+    long: `${fyStart}-${fyEnd}`,
+  }
+}
 
-CRITICAL RULES:
-1. NEVER leave placeholder text — use only the actual data provided
-2. Complete document — never cut off
-3. Include company name, CIN, registered office, notice date, meeting date/time/venue, and the name and designation of the signing director
+function generateNoticeHTML(data: {
+  companyName: string
+  cin: string
+  registeredOffice: string
+  email: string
+  dateOfNotice: string
+  meetingDate: string
+  meetingTime: string
+  venue: string
+  meetingNumber: number
+  directorName: string
+  directorDesignation: string
+  directorDin: string
+}): string {
+  const {
+    companyName, cin, registeredOffice, email,
+    dateOfNotice, meetingDate, meetingTime, venue,
+    meetingNumber, directorName, directorDesignation, directorDin,
+  } = data
 
-OUTPUT FORMAT — use ONLY these exact HTML classes, no markdown:
-- <p class="doc-title-main"> — main title, centered, bold, uppercase
-- <p class="doc-center"> — company details (name, CIN, address), centered
-- <p class="doc-section"> — section headers
-- <p class="doc-line"> — body text paragraphs
-- <div class="doc-sig">...</div> — signature block (director name, designation, DIN)
+  const fy = financialYear(meetingDate)
+  const mtgOrdinal = ordinal(meetingNumber)
 
-DOCUMENT STRUCTURE:
-1. Title: NOTICE OF MEETING OF THE BOARD OF DIRECTORS
-2. Company name, CIN, Registered Office
-3. Notice date
-4. Body: Notice is hereby given under Section 173(3) of the Companies Act, 2013 read with SS-1 that a meeting of the Board of Directors will be held on [date] at [time] at [venue]
-5. Agenda items if provided, else state "to transact such other business as may be brought before the Board"
-6. Signature block: For [Company Name], [Director Name], [Designation], DIN: [DIN]`
+  return `
+<p class="doc-title-main">${companyName.toUpperCase()}</p>
+<p class="doc-center">(CIN: ${cin})<br>Registered Office: ${registeredOffice}${email ? `<br>Email: ${email}` : ''}</p>
+
+<p class="doc-line" style="text-align:right;margin-top:18px;">Date: ${formatNoticeDate(dateOfNotice)}</p>
+
+<p class="doc-line" style="margin-top:18px;">To,<br>The Board of Directors<br><strong>${companyName}</strong><br>${registeredOffice}</p>
+
+<p class="doc-line" style="margin-top:14px;"><strong>Sub: Notice of ${mtgOrdinal} Board Meeting (of ${fy.short}) of the Board of Directors</strong></p>
+
+<p class="doc-line" style="margin-top:14px;">Dear Directors,</p>
+
+<p class="doc-line" style="margin-top:10px;">Notice is hereby given that the ${mtgOrdinal} Meeting of the Board of Directors of <strong>${companyName}</strong> (the "Company") for the financial year ${fy.long} is proposed to be held as per the following details:</p>
+
+<p class="doc-line" style="margin-top:12px;"><strong>Day and Date:</strong>&nbsp; ${formatMeetingDate(meetingDate)}</p>
+<p class="doc-line"><strong>Time:</strong>&nbsp; ${formatTime(meetingTime)}</p>
+<p class="doc-line"><strong>Venue:</strong>&nbsp; ${venue}</p>
+
+<p class="doc-line" style="margin-top:14px;">The Agenda along with notes to the agenda for the Board Meeting is attached herewith for your reference as Annexure I.</p>
+
+<p class="doc-line" style="margin-top:10px;">Each Director is requested to inform if they have any conflict of interest before participating in the aforesaid meeting and making decisions regarding the business of the Company.</p>
+
+<p class="doc-line" style="margin-top:10px;">Further, if any Director of the Company is unable to attend the ensuing Board Meeting, they may inform the Board before the date of the meeting by sending a signed leave of absence application.</p>
+
+<p class="doc-line" style="margin-top:10px;">Kindly make it convenient to attend the Meeting. Please acknowledge receipt of this notice.</p>
+
+<p class="doc-line" style="margin-top:20px;">With best regards,</p>
+<p class="doc-line">For <strong>${companyName}</strong></p>
+
+<div class="doc-sig" style="margin-top:40px;">
+  <div>
+    <div class="doc-sig-line"></div>
+    <p><strong>${directorName}</strong></p>
+    <p>${directorDesignation}</p>
+    <p>DIN: ${directorDin}</p>
+  </div>
+</div>
+`.trim()
+}
 
 export async function POST(
   req: NextRequest,
@@ -68,72 +135,59 @@ export async function POST(
     if (!user) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
 
     const body = await req.json()
-    const { signatory_director_id, date_of_notice } = body
+    const { signatory_director_id, date_of_notice, meeting_number } = body
 
-    if (!signatory_director_id || !date_of_notice) {
-      return NextResponse.json({ error: 'signatory_director_id and date_of_notice are required' }, { status: 400 })
+    if (!signatory_director_id || !date_of_notice || !meeting_number) {
+      return NextResponse.json(
+        { error: 'signatory_director_id, date_of_notice and meeting_number are required' },
+        { status: 400 }
+      )
     }
 
-    // Fetch meeting with client data
+    // Fetch meeting with client data (including email)
     const { data: meeting, error: meetingErr } = await supabase
       .from('meetings')
-      .select('*, clients(id, company_name, cin, registered_office)')
+      .select('*, clients(id, company_name, cin, registered_office, company_status, email)')
       .eq('id', params.id)
       .eq('user_id', user.id)
       .single()
 
     if (meetingErr || !meeting) return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
 
+    const client = meeting.clients as any
+
     // Fetch signatory director
     const { data: director, error: dirErr } = await supabase
       .from('directors')
-      .select('id, name, din, designation')
+      .select('id, name, din, designation, email')
       .eq('id', signatory_director_id)
-      .eq('client_id', (meeting.clients as any).id)
+      .eq('client_id', client.id)
       .single()
 
     if (dirErr || !director) return NextResponse.json({ error: 'Director not found' }, { status: 404 })
 
-    const client = meeting.clients as any
     const venue = meeting.venue_type === 'registered_office'
-      ? client.registered_office
+      ? `Registered Office of the Company at ${client.registered_office}`
       : meeting.venue_type === 'video'
         ? 'Video Conference'
         : meeting.venue_address || client.registered_office
 
-    const userPrompt = `Generate a formal Board Meeting Notice with the following details:
-
-COMPANY DETAILS:
-Company Name: ${client.company_name}
-CIN: ${client.cin}
-Registered Office: ${client.registered_office}
-
-NOTICE DATE: ${formatDate(date_of_notice)}
-
-MEETING DETAILS:
-Date: ${formatDate(meeting.meeting_date)}
-Time: ${formatTime(meeting.meeting_time)}
-Venue: ${venue}
-Meeting Type: ${meeting.meeting_type.toUpperCase()} Meeting of the Board of Directors
-
-SIGNATORY:
-Name: ${director.name}
-Designation: ${director.designation}
-DIN: ${director.din}
-
-Generate a complete, formal notice. Output clean HTML only using the specified CSS classes.`
-
-    const message = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1200,
-      system: NOTICE_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: userPrompt }],
+    const content = generateNoticeHTML({
+      companyName: client.company_name,
+      cin: client.cin,
+      registeredOffice: client.registered_office,
+      email: client.email || '',
+      dateOfNotice: date_of_notice,
+      meetingDate: meeting.meeting_date,
+      meetingTime: meeting.meeting_time,
+      venue,
+      meetingNumber: Number(meeting_number),
+      directorName: director.name,
+      directorDesignation: director.designation,
+      directorDin: director.din,
     })
 
-    let content = (message.content[0] as any).text || ''
-    content = content.replace(/```html|```/g, '').trim()
-
-    // Delete any existing notice for this meeting
+    // Delete existing notice for this meeting
     await supabase
       .from('documents')
       .delete()
@@ -141,8 +195,9 @@ Generate a complete, formal notice. Output clean HTML only using the specified C
       .eq('doc_subtype', 'notice')
       .eq('user_id', user.id)
 
-    // Save to documents
-    const title = `${client.company_name} — Board Meeting Notice — ${meeting.meeting_date}`
+    const fy = financialYear(meeting.meeting_date)
+    const title = `${client.company_name} — ${ordinal(Number(meeting_number))} Board Meeting Notice (${fy.short})`
+
     const { data: doc, error: docErr } = await supabase
       .from('documents')
       .insert({
@@ -159,6 +214,8 @@ Generate a complete, formal notice. Output clean HTML only using the specified C
           meeting_time: meeting.meeting_time,
           venue,
           date_of_notice,
+          meeting_number: Number(meeting_number),
+          financial_year: fy.short,
           signatory_name: director.name,
           signatory_din: director.din,
           signatory_designation: director.designation,
@@ -169,6 +226,7 @@ Generate a complete, formal notice. Output clean HTML only using the specified C
 
     if (docErr) return NextResponse.json({ error: docErr.message }, { status: 500 })
     return NextResponse.json({ document: doc, content }, { status: 201 })
+
   } catch (err: any) {
     console.error('Notice generation error:', err)
     return NextResponse.json({ error: err.message || 'Generation failed' }, { status: 500 })

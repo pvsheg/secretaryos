@@ -110,6 +110,7 @@ export default function MeetingDetailPage() {
   // Notice form
   const [noticeSignatory, setNoticeSignatory] = useState('')
   const [noticeDate, setNoticeDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [meetingNumber, setMeetingNumber] = useState('1')
   const [noticePending, setNoticePending] = useState(false)
   const [noticeError, setNoticeError] = useState('')
 
@@ -192,13 +193,13 @@ export default function MeetingDetailPage() {
   }
 
   async function generateNotice() {
-    if (!noticeSignatory || !noticeDate) { setNoticeError('Please select a signatory and date.'); return }
+    if (!noticeSignatory || !noticeDate || !meetingNumber) { setNoticeError('Please fill all notice fields.'); return }
     setNoticePending(true); setNoticeError('')
     try {
       const res = await fetch(`/api/meetings/${meetingId}/notice`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ signatory_director_id: noticeSignatory, date_of_notice: noticeDate }),
+        body: JSON.stringify({ signatory_director_id: noticeSignatory, date_of_notice: noticeDate, meeting_number: Number(meetingNumber) }),
       })
       const data = await res.json()
       if (!res.ok) { setNoticeError(data.error || 'Generation failed'); return }
@@ -412,6 +413,9 @@ export default function MeetingDetailPage() {
               {/* Notice details */}
               {noticeDoc && !showNoticeForm && (
                 <div className="text-xs text-slate-500 space-y-0.5 mb-2">
+                  {noticeDoc.metadata?.meeting_number && (
+                    <p>Meeting: <span className="font-medium text-ink">{noticeDoc.metadata.meeting_number === 1 ? '1st' : noticeDoc.metadata.meeting_number === 2 ? '2nd' : noticeDoc.metadata.meeting_number === 3 ? '3rd' : `${noticeDoc.metadata.meeting_number}th`} Board Meeting ({noticeDoc.metadata.financial_year})</span></p>
+                  )}
                   <p>Signatory: <span className="font-medium text-ink">{noticeDoc.metadata?.signatory_name || '—'}</span></p>
                   <p>Date of notice: <span className="font-medium text-ink">{noticeDoc.metadata?.date_of_notice ? formatDisplayDate(noticeDoc.metadata.date_of_notice) : '—'}</span></p>
                   <p className="text-slate-400">Created {formatShortDate(noticeDoc.created_at)}</p>
@@ -421,6 +425,22 @@ export default function MeetingDetailPage() {
               {/* Notice form */}
               {showNoticeForm && (
                 <div className="space-y-4 mt-2 pt-4 border-t border-slate-50">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelCls}>Meeting number *</label>
+                      <input
+                        type="number" min="1" className={inputCls}
+                        value={meetingNumber}
+                        onChange={e => setMeetingNumber(e.target.value)}
+                        placeholder="e.g. 1"
+                      />
+                      <p className="text-xs text-slate-400 mt-1">e.g. 1 → "1st Board Meeting"</p>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Date of Notice *</label>
+                      <input type="date" className={inputCls} value={noticeDate} onChange={e => setNoticeDate(e.target.value)} />
+                    </div>
+                  </div>
                   <div>
                     <label className={labelCls}>Signatory Director *</label>
                     <select className={inputCls} value={noticeSignatory} onChange={e => setNoticeSignatory(e.target.value)}>
@@ -429,10 +449,6 @@ export default function MeetingDetailPage() {
                         <option key={d.id} value={d.id}>{d.name} — {d.designation} (DIN: {d.din})</option>
                       ))}
                     </select>
-                  </div>
-                  <div>
-                    <label className={labelCls}>Date of Notice *</label>
-                    <input type="date" className={inputCls} value={noticeDate} onChange={e => setNoticeDate(e.target.value)} />
                   </div>
                   {noticeError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2.5">{noticeError}</p>}
                   <div className="flex gap-2">
