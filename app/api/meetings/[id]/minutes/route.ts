@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { AGENDA_LIBRARY } from '@/lib/agenda-library'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -43,9 +44,9 @@ CRITICAL RULES:
 2. Complete document — never cut off
 3. Number items with zero-padded 2-digit numbers: 01. 02. 03. etc.
 4. Items 01, 02, 03 are always procedural (Chairperson, Quorum, Leave of Absence) — they come BEFORE the agenda items which start at 04
-5. Every agenda item must have a RESOLVED THAT block
+5. Every agenda item must have exactly ONE RESOLVED THAT block
 6. Resolution text goes inside a <p class="doc-resolution"> tag
-7. Use "RESOLVED FURTHER THAT" in <p class="doc-further"> for additional clauses
+7. RESOLVED FURTHER THAT is OPTIONAL — only add it when the item genuinely requires an additional enabling/authorisation clause. NEVER add more than one RESOLVED FURTHER THAT per item. Most items do NOT need it.
 8. If RESOLUTION NOTES are provided for an item, incorporate those details into the RESOLVED THAT text
 
 OUTPUT FORMAT — use ONLY these exact HTML classes:
@@ -182,11 +183,19 @@ export async function POST(
 
     const agendaLines = Array.isArray(agendaItemsRaw) && agendaItemsRaw.length > 0
       ? agendaItemsRaw.map((item: any, idx: number) => {
-          const itemNum = String(idx + 4).padStart(2, '0') // agenda items start at 04 in minutes
+          const itemNum = String(idx + 4).padStart(2, '0')
           const resolutionNote = resolutions.find((r: any) => r.idx === idx)?.notes || item.notes || ''
           let line = ''
           if (typeof item === 'string') {
-            line = `${itemNum}. ${item}`
+            const lib = AGENDA_LIBRARY[item]
+            line = lib ? `${itemNum}. ${lib.label} — under ${lib.sections.join(', ')}` : `${itemNum}. ${item}`
+          } else if (item.key) {
+            const lib = AGENDA_LIBRARY[item.key]
+            if (lib) {
+              line = `${itemNum}. ${lib.label} — under ${lib.sections.join(', ')}`
+            } else {
+              line = `${itemNum}. ${item.label || item.key}`
+            }
           } else if (item.label) {
             line = `${itemNum}. ${item.label}${item.sections?.length ? ` — under ${item.sections.join(', ')}` : ''}`
           } else {

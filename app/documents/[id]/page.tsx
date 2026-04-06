@@ -166,7 +166,11 @@ export default function DocumentPage() {
               {doc.metadata.directors_present && (
                 <div className="sm:col-span-2">
                   <p className="text-xs text-slate-400 mb-0.5">Directors present</p>
-                  <p className="text-sm text-ink whitespace-pre-line">{doc.metadata.directors_present}</p>
+                  <p className="text-sm text-ink whitespace-pre-line">
+                    {Array.isArray(doc.metadata.directors_present)
+                      ? doc.metadata.directors_present.map((d: any) => `${d.name} (DIN: ${d.din}), ${d.designation}`).join('\n')
+                      : doc.metadata.directors_present}
+                  </p>
                 </div>
               )}
               {doc.metadata.agenda_items && (
