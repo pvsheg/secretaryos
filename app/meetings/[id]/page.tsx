@@ -335,10 +335,16 @@ export default function MeetingDetailPage() {
         cin: client?.cin || '',
         customTemplate: null,
       }
-      if (doc.doc_subtype === 'notice' && doc.metadata) {
-        meta.signatoryName = doc.metadata.signatory_name || ''
-        meta.signatoryDesignation = doc.metadata.signatory_designation || ''
-        meta.signatoryDin = doc.metadata.signatory_din || ''
+      // Pass signatory for notice/agenda from own metadata; fall back to notice metadata for older agenda docs
+      const sigMeta = doc.doc_subtype === 'notice'
+        ? doc.metadata
+        : doc.doc_subtype === 'agenda'
+          ? (doc.metadata?.signatory_name ? doc.metadata : (noticeDoc?.metadata ?? null))
+          : null
+      if (sigMeta) {
+        meta.signatoryName = sigMeta.signatory_name || ''
+        meta.signatoryDesignation = sigMeta.signatory_designation || ''
+        meta.signatoryDin = sigMeta.signatory_din || ''
       }
       await generatePDF(htmlOverride ?? doc.content, fileName, meta)
     } catch (err) {
@@ -390,7 +396,7 @@ export default function MeetingDetailPage() {
   }
 
   const inputCls = 'w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 transition-colors bg-gray-50'
-  const labelCls = 'block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5'
+  const labelCls = 'block text-sm font-semibold uppercase tracking-wider text-slate-500 mb-1.5'
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -587,7 +593,7 @@ export default function MeetingDetailPage() {
                   {noticeError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2.5">{noticeError}</p>}
                   <div className="flex gap-2">
                     <button onClick={generateNotice} disabled={noticePending}
-                      className="flex-1 py-2.5 bg-ink text-white rounded-lg text-xs font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
+                      className="flex-1 py-2.5 bg-ink text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
                       {noticePending ? <><Spinner />Generating...</> : '✦ Generate Notice'}
                     </button>
                     <button onClick={() => { setShowNoticeForm(false); setNoticeError('') }}
@@ -669,7 +675,7 @@ export default function MeetingDetailPage() {
                             className={`w-full flex items-start gap-3 p-2.5 rounded-lg border text-left transition-all ${alreadyAdded ? 'border-slate-100 bg-slate-50 opacity-40 cursor-default' : 'border-slate-100 hover:border-teal hover:bg-teal/5 bg-white'}`}>
                             <span className={`mt-0.5 flex-shrink-0 text-xs font-bold w-4 ${alreadyAdded ? 'text-green-500' : 'text-teal'}`}>{alreadyAdded ? '✓' : '+'}</span>
                             <div>
-                              <div className="text-xs font-medium text-ink">{item.label}</div>
+                              <div className="text-sm font-medium text-ink">{item.label}</div>
                               <div className="text-xs text-slate-400 mt-0.5">{item.sections.join(' · ')}</div>
                             </div>
                           </button>
@@ -688,7 +694,7 @@ export default function MeetingDetailPage() {
                                 <button type="button" onClick={() => addAgendaItem(ca.id, ca.label, ca.sections ? ca.sections.split(',').map(s => s.trim()).filter(Boolean) : [])} disabled={alreadyAdded}
                                   className={`flex-shrink-0 mt-0.5 text-xs font-bold w-4 ${alreadyAdded ? 'text-green-500' : 'text-teal'}`}>{alreadyAdded ? '✓' : '+'}</button>
                                 <div className="flex-1 min-w-0">
-                                  <div className="text-xs font-medium text-ink">{ca.label}</div>
+                                  <div className="text-sm font-medium text-ink">{ca.label}</div>
                                   {ca.sections && <div className="text-xs text-slate-400 mt-0.5">{ca.sections}</div>}
                                 </div>
                                 <button type="button" onClick={() => deleteCustomAgenda(ca.id)}
@@ -703,7 +709,7 @@ export default function MeetingDetailPage() {
                     {/* Add custom agenda */}
                     {!showAddCustom ? (
                       <button type="button" onClick={() => setShowAddCustom(true)}
-                        className="mt-2 text-xs font-medium text-teal hover:text-teal-dark transition-colors flex items-center gap-1">
+                        className="mt-2 text-sm font-medium text-teal hover:text-teal-dark transition-colors flex items-center gap-1">
                         + Add custom agenda item
                       </button>
                     ) : (
@@ -711,7 +717,7 @@ export default function MeetingDetailPage() {
                         <div>
                           <input
                             type="text"
-                            className="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white"
+                            className="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white"
                             placeholder="Agenda item title *"
                             value={customLabel}
                             onChange={e => setCustomLabel(e.target.value)}
@@ -720,7 +726,7 @@ export default function MeetingDetailPage() {
                         <div>
                           <input
                             type="text"
-                            className="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white"
+                            className="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white"
                             placeholder="Sections / references (optional, e.g. Section 179, SS-1)"
                             value={customSections}
                             onChange={e => setCustomSections(e.target.value)}
@@ -728,11 +734,11 @@ export default function MeetingDetailPage() {
                         </div>
                         <div className="flex gap-2">
                           <button type="button" onClick={saveCustomAgenda} disabled={!customLabel.trim()}
-                            className="px-3 py-1.5 bg-ink text-white text-xs font-semibold rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50">
+                            className="px-3 py-1.5 bg-ink text-white text-sm font-semibold rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50">
                             Save &amp; Add
                           </button>
                           <button type="button" onClick={() => { setShowAddCustom(false); setCustomLabel(''); setCustomSections('') }}
-                            className="px-3 py-1.5 border border-slate-200 text-xs text-ink rounded-lg hover:bg-slate-50 transition-colors">
+                            className="px-3 py-1.5 border border-slate-200 text-sm text-ink rounded-lg hover:bg-slate-50 transition-colors">
                             Cancel
                           </button>
                         </div>
@@ -756,10 +762,10 @@ export default function MeetingDetailPage() {
                                 <span className="w-6 h-6 rounded-full bg-ink text-white text-xs flex items-center justify-center font-bold flex-shrink-0 mt-0.5">{idx + 1}</span>
                                 {/* Label */}
                                 <div className="flex-1 min-w-0">
-                                  <div className="text-xs font-medium text-ink leading-snug">{label}</div>
+                                  <div className="text-sm font-medium text-ink leading-snug">{label}</div>
                                   {sections.length > 0 && <div className="text-xs text-slate-400 mt-0.5">{sections.join(' · ')}</div>}
                                   {item.notes && !item.notesOpen && (
-                                    <div className="text-xs text-teal mt-1 truncate">📝 {item.notes}</div>
+                                    <div className="text-sm text-teal mt-1 truncate">📝 {item.notes}</div>
                                   )}
                                 </div>
                                 {/* Controls — larger, always visible */}
@@ -777,9 +783,9 @@ export default function MeetingDetailPage() {
                               </div>
                               {item.notesOpen && (
                                 <div className="px-3 pb-3 border-t border-slate-100 pt-2.5">
-                                  <p className="text-xs text-slate-400 mb-1.5">Drafting instructions — the AI will incorporate these into the agenda for this item</p>
+                                  <p className="text-sm text-slate-400 mb-1.5">Drafting instructions — the AI will incorporate these into the agenda for this item</p>
                                   <textarea
-                                    className="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-slate-50 resize-none"
+                                    className="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-slate-50 resize-none"
                                     rows={3}
                                     placeholder="e.g. Director being appointed is John Smith, DIN 12345678, appointed w.e.f. 1st April 2024 as Additional Director..."
                                     value={item.notes}
@@ -806,7 +812,7 @@ export default function MeetingDetailPage() {
                   {agendaError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2.5">{agendaError}</p>}
                   <div className="flex gap-2">
                     <button onClick={generateAgenda} disabled={agendaPending}
-                      className="flex-1 py-2.5 bg-ink text-white rounded-lg text-xs font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
+                      className="flex-1 py-2.5 bg-ink text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
                       {agendaPending ? <><Spinner />Generating...</> : '✦ Generate Agenda'}
                     </button>
                     <button onClick={() => { setShowAgendaForm(false); setAgendaError('') }}
@@ -898,8 +904,8 @@ export default function MeetingDetailPage() {
                             {minutesPresent.includes(d.id) && <span className="text-white text-xs">✓</span>}
                           </div>
                           <div>
-                            <div className="text-xs font-medium text-ink">{d.name}</div>
-                            <div className="text-xs text-slate-400">{d.designation} · DIN: {d.din}</div>
+                            <div className="text-sm font-medium text-ink">{d.name}</div>
+                            <div className="text-sm text-slate-400">{d.designation} · DIN: {d.din}</div>
                           </div>
                         </button>
                       ))}
@@ -913,7 +919,7 @@ export default function MeetingDetailPage() {
                   {agendaDoc?.metadata?.agenda_items && (agendaDoc.metadata.agenda_items as any[]).length > 0 && (
                     <div>
                       <label className={labelCls}>Resolution notes per agenda item <span className="normal-case font-normal text-slate-400">(optional)</span></label>
-                      <p className="text-xs text-slate-400 mb-2">Add key details — names, amounts, dates — to be woven into each RESOLVED THAT.</p>
+                      <p className="text-sm text-slate-400 mb-2">Add key details — names, amounts, dates — to be woven into each RESOLVED THAT.</p>
                       <div className="space-y-2">
                         {(agendaDoc.metadata.agenda_items as any[]).map((item: any, idx: number) => {
                           const lib = AGENDA_LIBRARY[typeof item === 'string' ? item : item?.key]
@@ -922,11 +928,11 @@ export default function MeetingDetailPage() {
                           return (
                             <div key={idx} className="border border-slate-100 rounded-lg overflow-hidden">
                               <div className="px-3 py-2 bg-slate-50 border-b border-slate-100">
-                                <span className="text-xs font-semibold text-ink">{itemNum}. {label}</span>
+                                <span className="text-sm font-semibold text-ink">{itemNum}. {label}</span>
                               </div>
                               <div className="p-2">
                                 <textarea
-                                  className="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white resize-none"
+                                  className="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-teal focus:ring-1 focus:ring-teal/20 bg-white resize-none"
                                   rows={2}
                                   placeholder="e.g. Appoint John Smith (DIN 12345678) as Additional Director w.e.f. 1st April 2024..."
                                   value={minutesResolutions[idx] || ''}
@@ -955,7 +961,7 @@ export default function MeetingDetailPage() {
                   {minutesError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2.5">{minutesError}</p>}
                   <div className="flex gap-2">
                     <button onClick={generateMinutes} disabled={minutesPending}
-                      className="flex-1 py-2.5 bg-ink text-white rounded-lg text-xs font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
+                      className="flex-1 py-2.5 bg-ink text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
                       {minutesPending ? <><Spinner />Generating...</> : '✦ Generate Minutes'}
                     </button>
                     <button onClick={() => { setShowMinutesForm(false); setMinutesError('') }}

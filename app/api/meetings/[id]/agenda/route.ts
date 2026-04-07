@@ -45,17 +45,18 @@ CRITICAL RULES:
 3. Number agenda items with zero-padded 2-digit numbers: 01. 02. 03. etc.
 4. Each agenda item has TWO parts: a bold numbered title line, then a plain description paragraph
 5. If an item has DRAFTING INSTRUCTIONS, incorporate those details into the description paragraph
+6. Only include Email in the doc-center block if an email address is actually provided — omit the line entirely if email is empty
 
 OUTPUT FORMAT — use ONLY these exact HTML classes, no markdown:
 - <p class="doc-title-main"> — company name, ALL CAPS
-- <p class="doc-center"> — (CIN: ...) on first line, then Registered Office, then Email (use <br> between)
+- <p class="doc-center"> — (CIN: ...) on first line, then Registered Office, then Email if provided (use <br> between)
 - <p class="doc-line"> — all body text including the meeting title line and each agenda item title/description
 - <p class="doc-section"> — section header: AGENDA ITEMS
 - <div class="doc-notice-sig"> — signature block at end
 
 DOCUMENT STRUCTURE (follow exactly):
 1. <p class="doc-title-main">COMPANY NAME</p>
-2. <p class="doc-center">(CIN: ...)<br>Registered Office: ...<br>Email: ...</p>
+2. <p class="doc-center">(CIN: ...)<br>Registered Office: ...[<br>Email: ... only if email provided]</p>
 3. <p class="doc-line"><strong>AGENDA FOR THE [Nth] BOARD MEETING OF [COMPANY NAME] TO BE HELD ON [DAY, DATE], AT [TIME] AT [VENUE]-</strong></p>
 4. <p class="doc-section">AGENDA ITEMS</p>
 5. For each item:
@@ -136,13 +137,13 @@ export async function POST(
     const signatoryDesignation = signatoryMeta?.signatory_designation || ''
     const signatoryDin = signatoryMeta?.signatory_din || ''
 
+    const clientEmail = (client as any).email || ''
     const userPrompt = `Generate a formal Board Meeting Agenda with the following details:
 
 COMPANY DETAILS:
 Company Name: ${client.company_name}
 CIN: ${client.cin}
-Registered Office: ${client.registered_office}
-Email: ${(client as any).email || ''}
+Registered Office: ${client.registered_office}${clientEmail ? `\nEmail: ${clientEmail}` : '\n(No email — omit email line from document)'}
 
 MEETING DETAILS:
 Meeting Number (ordinal): ${signatoryMeta?.meeting_number ? `${signatoryMeta.meeting_number}` : '1'}
@@ -198,6 +199,9 @@ Output clean HTML only using the specified CSS classes. Follow the document stru
           agenda_items,
           special_instructions,
           item_count: agendaLines.length,
+          signatory_name: signatoryName,
+          signatory_designation: signatoryDesignation,
+          signatory_din: signatoryDin,
         },
       })
       .select()
