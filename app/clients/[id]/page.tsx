@@ -40,10 +40,11 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) redirect('/auth')
 
-  const [{ data: client }, { data: documents }, { count: docCount }] = await Promise.all([
+  const [{ data: client }, { data: documents }, { count: docCount }, { data: meetings }] = await Promise.all([
     supabase.from('clients').select('*, directors(*)').eq('id', params.id).single(),
     supabase.from('documents').select('*').eq('client_id', params.id).eq('user_id', session.user.id).order('created_at', { ascending: false }),
     supabase.from('documents').select('*', { count: 'exact', head: true }).eq('client_id', params.id).eq('user_id', session.user.id),
+    supabase.from('meetings').select('id, meeting_date, meeting_time, meeting_type, status, documents(doc_subtype)').eq('client_id', params.id).eq('user_id', session.user.id).order('meeting_date', { ascending: false }).limit(10),
   ])
 
   if (!client) notFound()
@@ -87,10 +88,14 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
               <Link href={`/clients/${client.id}/edit`}
                 className="px-4 py-2 border border-slate-200 text-ink text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">
                 Edit
+              </Link>
+              <Link href={`/meetings/new?client=${client.id}`}
+                className="flex items-center gap-1.5 px-4 py-2 bg-teal text-white text-sm font-semibold rounded-lg hover:bg-teal-dark transition-colors">
+                + Call a Meeting
               </Link>
               <Link href={`/generate?client=${client.id}`}
                 className="flex items-center gap-1.5 px-4 py-2 bg-ink text-white text-sm font-semibold rounded-lg hover:bg-slate-800 transition-colors">
@@ -100,17 +105,21 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
           </div>
 
           {/* Quick stats */}
-          <div className="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-slate-50">
+          <div className="grid grid-cols-4 gap-3 mt-5 pt-5 border-t border-slate-50">
             <div className="text-center">
+              <p className="font-serif text-2xl font-bold text-ink">{meetings?.length ?? 0}</p>
+              <p className="text-xs text-slate-400 mt-0.5">Meetings</p>
+            </div>
+            <div className="text-center border-x border-slate-100">
               <p className="font-serif text-2xl font-bold text-ink">{docCount ?? 0}</p>
               <p className="text-xs text-slate-400 mt-0.5">Documents</p>
             </div>
-            <div className="text-center border-x border-slate-100">
+            <div className="text-center border-r border-slate-100">
               <p className="font-serif text-2xl font-bold text-ink">{directors.length}</p>
               <p className="text-xs text-slate-400 mt-0.5">Directors</p>
             </div>
             <div className="text-center">
-              <p className="font-serif text-lg font-bold text-ink leading-tight">{client.financial_year_end}</p>
+              <p className="font-serif text-base font-bold text-ink leading-tight">{client.financial_year_end}</p>
               <p className="text-xs text-slate-400 mt-0.5">FY End</p>
             </div>
           </div>
@@ -200,8 +209,89 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
 
           </div>
 
-          {/* RIGHT — DOCUMENTS */}
-          <div className="lg:col-span-2">
+          {/* RIGHT — MEETINGS + DOCUMENTS */}
+          <div className="lg:col-span-2 space-y-5">
+
+            {/* MEETINGS */}
+            <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-50 flex items-center justify-between">
+                <h2 className="font-semibold text-ink text-sm">Meetings</h2>
+                <Link href={`/meetings/new?client=${client.id}`}
+                  className="flex items-center gap-1 text-xs font-semibold text-teal hover:text-teal-dark transition-colors">
+                  + Call a Meeting
+                </Link>
+              </div>
+              {!meetings?.length ? (
+                <div className="px-5 py-10 text-center">
+                  <p className="text-3xl mb-2">📅</p>
+                  <p className="font-semibold text-ink text-sm mb-1">No meetings yet</p>
+                  <p className="text-xs text-slate-400 mb-4">Schedule a board or general meeting to generate all related documents</p>
+                  <Link href={`/meetings/new?client=${client.id}`}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-teal text-white text-xs font-semibold rounded-lg hover:bg-teal-dark transition-colors">
+                    + Call a Meeting
+                  </Link>
+                </div>
+              ) : (
+                <div>
+                  {meetings.map((meeting: any, idx: number) => {
+                    const docs: string[] = (meeting.documents || []).map((d: any) => d.doc_subtype).filter(Boolean)
+                    const hasNotice  = docs.includes('notice')
+                    const hasAgenda  = docs.includes('agenda')
+                    const hasMinutes = docs.includes('minutes')
+                    const statusColors: Record<string, string> = {
+                      scheduled: 'bg-blue-50 text-blue-700',
+                      completed: 'bg-green-50 text-green-700',
+                      cancelled: 'bg-red-50 text-red-600',
+                    }
+                    const typeLabels: Record<string, string> = {
+                      board: 'Board', agm: 'AGM', egm: 'EGM', custom: 'Custom',
+                    }
+                    return (
+                      <Link key={meeting.id} href={`/meetings/${meeting.id}`}
+                        className={`flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 transition-colors ${idx !== 0 ? 'border-t border-slate-50' : ''}`}>
+                        <div className="w-9 h-9 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center text-base flex-shrink-0">
+                          📅
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-semibold text-ink">
+                              {new Date(meeting.meeting_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                            <span className="text-xs text-slate-400">{meeting.meeting_time?.slice(0, 5)}</span>
+                            <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${statusColors[meeting.status] || 'bg-gray-100 text-gray-500'}`}>
+                              {meeting.status}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                            <span className="text-xs text-slate-400">{typeLabels[meeting.meeting_type] || meeting.meeting_type}</span>
+                            <span className="text-slate-200">·</span>
+                            {[
+                              { label: 'Notice', has: hasNotice },
+                              { label: 'Agenda', has: hasAgenda },
+                              { label: 'Minutes', has: hasMinutes },
+                            ].map(({ label, has }) => (
+                              <span key={label} className={`text-xs px-1.5 py-0.5 rounded font-medium ${has ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400'}`}>
+                                {has ? '✓' : '○'} {label}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <span className="text-slate-300 flex-shrink-0">→</span>
+                      </Link>
+                    )
+                  })}
+                  {meetings.length >= 10 && (
+                    <div className="px-5 py-3 border-t border-slate-50 text-center">
+                      <Link href={`/meetings?client=${client.id}`} className="text-xs text-teal hover:text-teal-dark font-medium">
+                        View all meetings →
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* DOCUMENTS */}
             <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-50 flex items-center justify-between">
                 <h2 className="font-semibold text-ink text-sm">Documents</h2>
@@ -244,7 +334,8 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                 </div>
               )}
             </div>
-          </div>
+
+          </div>{/* end right column */}
         </div>
       </main>
     </div>

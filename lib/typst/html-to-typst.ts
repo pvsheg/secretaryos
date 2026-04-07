@@ -10,6 +10,9 @@ export interface TypstDocMetadata {
   chairman_din?: string
   cs_name?: string
   cs_membership?: string
+  signatory_name?: string
+  signatory_designation?: string
+  signatory_din?: string
 }
 
 // Escape special Typst characters
@@ -107,6 +110,15 @@ export function htmlToTypst(html: string, meta: TypstDocMetadata): string {
         typstLines.push(`  place: "${escapeStr(meta.place || 'India')}",`)
         typstLines.push(`)`)
         break
+      case 'notice-sig':
+        typstLines.push(`#doc_notice_sig(`)
+        typstLines.push(`  name: "${escapeStr(meta.signatory_name || '')}",`)
+        typstLines.push(`  designation: "${escapeStr(meta.signatory_designation || '')}",`)
+        typstLines.push(`  din: "${escapeStr(meta.signatory_din || '')}",`)
+        typstLines.push(`  date: "${escapeStr(meta.meeting_date)}",`)
+        typstLines.push(`  place: "${escapeStr(meta.place || 'India')}",`)
+        typstLines.push(`)`)
+        break
     }
   }
 
@@ -114,7 +126,7 @@ export function htmlToTypst(html: string, meta: TypstDocMetadata): string {
 }
 
 interface ParsedLine {
-  type: 'title' | 'center' | 'section' | 'line' | 'resolution' | 'further' | 'sig' | 'divider'
+  type: 'title' | 'center' | 'section' | 'line' | 'resolution' | 'further' | 'sig' | 'notice-sig' | 'divider'
   content: string
 }
 
@@ -183,7 +195,7 @@ function parseHtmlToLines(html: string): ParsedLine[] {
     const rawContent = match[3]
     const content = htmlToTypstInline(rawContent)
 
-    if (!content && className !== 'doc-sig') continue
+    if (!content && className !== 'doc-sig' && className !== 'doc-notice-sig') continue
 
     switch (className) {
       case 'doc-title-main':
@@ -206,6 +218,9 @@ function parseHtmlToLines(html: string): ParsedLine[] {
         break
       case 'doc-sig':
         lines.push({ type: 'sig', content: '' })
+        break
+      case 'doc-notice-sig':
+        lines.push({ type: 'notice-sig', content: '' })
         break
     }
   }
