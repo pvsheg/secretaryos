@@ -1004,7 +1004,7 @@ export default function MeetingDetailPage() {
                 </div>
                 <div>
                   <p className="text-xs text-slate-400">Venue</p>
-                  <p className="text-sm font-medium text-ink leading-snug">{venue}</p>
+                  <p className="text-sm font-medium text-ink leading-snug break-words">{venue}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400">Type</p>
