@@ -4,23 +4,29 @@ import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 
 const PLAN_FEATURES: Record<string, string[]> = {
-  free:     ['3 document generations (all time)', 'All document types', 'MCA auto-fetch via CIN', 'PDF download'],
-  founding: ['100 documents / month', 'All document types', 'MCA auto-fetch, 100+ agenda types', 'Priority support'],
-  starter:  ['50 documents / month', 'Up to 10 client companies', 'All document types', 'MCA auto-fetch, PDF download', 'Compliance calendar'],
-  growth:   ['200 documents / month', 'Unlimited client companies', 'All document types', '100+ agenda types', 'Compliance calendar, statutory registers', '10 MCA syncs / month', 'Priority support'],
-  firm:     ['500 documents / month', 'Unlimited clients & team seats', 'All document types', 'Custom templates', 'Dedicated account manager'],
+  free:         ['5 documents / month', 'Board meetings (Notice, Agenda, Minutes)', 'Unlimited companies', 'MCA auto-fetch via CIN', 'PDF download'],
+  professional: ['100 documents / month (200 with rollover)', 'Board meetings + AGM system', 'Unlimited companies', 'Unlimited document templates', 'Email support'],
+  firm:         ['200 documents / month (400 with rollover)', 'Everything in Professional', 'Priority support (24-hour response)', 'Custom PDF templates', 'Multi-user access (5 seats)', 'Admin dashboard'],
+  // legacy plans
+  founding:     ['100 documents / month', 'All document types', 'MCA auto-fetch, 100+ agenda types', 'Priority support'],
+  starter:      ['50 documents / month', 'Up to 10 client companies', 'All document types', 'MCA auto-fetch, PDF download', 'Compliance calendar'],
+  growth:       ['200 documents / month', 'Unlimited client companies', 'All document types', '100+ agenda types', 'Compliance calendar, statutory registers', '10 MCA syncs / month', 'Priority support'],
 }
 
 const PLAN_LABELS: Record<string, string> = {
-  free: 'Free', founding: 'Founding', starter: 'Starter', growth: 'Growth', firm: 'Firm',
+  free: 'Free', professional: 'Professional', firm: 'Firm',
+  // legacy
+  founding: 'Founding', starter: 'Starter', growth: 'Growth',
 }
 
 const PLAN_BADGE: Record<string, string> = {
-  free:     'bg-gray-100 text-gray-700',
-  founding: 'bg-amber-100 text-amber-700',
-  starter:  'bg-blue-100 text-blue-700',
-  growth:   'bg-teal/10 text-teal-dark',
-  firm:     'bg-purple-100 text-purple-700',
+  free:         'bg-gray-100 text-gray-700',
+  professional: 'bg-teal/10 text-teal-dark',
+  firm:         'bg-purple-100 text-purple-700',
+  // legacy
+  founding:     'bg-amber-100 text-amber-700',
+  starter:      'bg-blue-100 text-blue-700',
+  growth:       'bg-teal/10 text-teal-dark',
 }
 
 export default async function AccountPage() {
