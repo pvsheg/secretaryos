@@ -26,3 +26,66 @@ export const LOADING_STEPS = [
 ]
 
 export const ADMIN_EMAILS = ['pvsheg@gmail.com']
+
+export const PRICING_TIERS = {
+  free: {
+    name: 'Free',
+    price: 0,
+    annualPrice: 0,
+    currency: 'INR',
+    docsPerMonth: 5,
+    maxWithRollover: 5,
+    companies: 'unlimited' as const,
+    users: 1,
+    features: ['Board meetings (Notice, Agenda, Minutes)', 'MCA auto-fetch via CIN', 'PDF download'],
+  },
+  professional: {
+    name: 'Professional',
+    price: 499,
+    annualPrice: 4999,
+    currency: 'INR',
+    docsPerMonth: 100,
+    maxWithRollover: 200,
+    companies: 'unlimited' as const,
+    users: 1,
+    features: [
+      'Board meetings (Notice, Agenda, Minutes)',
+      'AGM system (Notice, Agenda, Minutes)',
+      'Unlimited document templates',
+      'Email support',
+      'MCA auto-fetch via CIN',
+      'PDF download',
+      '30-day document rollover',
+    ],
+  },
+  firm: {
+    name: 'Firm',
+    price: 1500,
+    annualPrice: 14999,
+    currency: 'INR',
+    docsPerMonth: 200,
+    maxWithRollover: 400,
+    companies: 'unlimited' as const,
+    users: 5,
+    features: [
+      'Everything in Professional',
+      'Priority support (24-hour response)',
+      'Custom PDF templates',
+      'Multi-user access (5 seats)',
+      'Admin dashboard',
+      '30-day document rollover',
+    ],
+  },
+}
+
+export const REFERRAL_COMMISSION = {
+  rate: 0.20,
+  individual: {
+    monthlyCommission: 99.80,
+    annualValue: 1197,
+  },
+  firm: {
+    monthlyCommission: 300,
+    annualValue: 3600,
+  },
+}
