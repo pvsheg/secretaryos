@@ -207,8 +207,8 @@ function getDefaultTemplate(isDemo: boolean = false): string {
 #let doc-divider() = { v(6pt); line(length: 100%, stroke: 0.5pt + black); v(6pt) }
 #let doc-section(content) = { v(14pt); set text(size: 11pt, weight: "bold", fill: black, tracking: 0.5pt); upper(content); v(2pt); line(length: 100%, stroke: 0.5pt + rgb("#cccccc")); v(4pt) }
 #let doc-line(content) = { pad(left: 0pt)[#set text(size: 11pt); #content]; v(3pt) }
-#let doc-resolution(content) = { v(6pt); block(width: 100%, stroke: (left: 2pt + black), inset: (left: 12pt, right: 12pt, top: 6pt, bottom: 6pt))[#set text(size: 11pt); #content]; v(4pt) }
-#let doc-further(content) = { v(3pt); block(width: 100%, stroke: (left: 1pt + rgb("#555555")), inset: (left: 12pt, right: 12pt, top: 6pt, bottom: 6pt))[#set text(size: 11pt); #content]; v(4pt) }
+#let doc-resolution(content) = { v(6pt); block(width: 100%)[#set text(size: 11pt); #content]; v(4pt) }
+#let doc-further(content) = { v(3pt); block(width: 100%)[#set text(size: 11pt); #content]; v(4pt) }
 #let doc-sig(chairman_name: "", chairman_din: "", cs_name: "", cs_membership: "", date: "", place: "") = {
   v(24pt); line(length: 100%, stroke: 0.5pt + rgb("#cccccc")); v(12pt)
   grid(columns: (1fr, 1fr), gutter: 20pt,
