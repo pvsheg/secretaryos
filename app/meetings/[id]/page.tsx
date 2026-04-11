@@ -65,8 +65,12 @@ function Spinner() {
   return <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
 }
 
-function DocPreview({ content, onDownload, downloading }: {
-  content: string; onDownload: (html: string) => void; downloading: boolean
+function DocPreview({ content, onDownload, onDownloadDocx, downloading, downloadingDocx }: {
+  content: string
+  onDownload: (html: string) => void
+  onDownloadDocx?: (html: string) => void
+  downloading: boolean
+  downloadingDocx?: boolean
 }) {
   const [editing, setEditing] = useState(false)
   const [savedContent, setSavedContent] = useState(content)
@@ -106,14 +110,23 @@ function DocPreview({ content, onDownload, downloading }: {
         contentEditable={editing}
         suppressContentEditableWarning
       />
-      <div className="border-t border-slate-100 px-4 py-3">
+      <div className="border-t border-slate-100 px-4 py-3 flex gap-2">
         <button
           onClick={() => onDownload(savedContent)}
           disabled={downloading}
-          className="w-full py-2.5 bg-ink text-white rounded-lg text-xs font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+          className="flex-1 py-2.5 bg-ink text-white rounded-lg text-xs font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
         >
-          {downloading ? <><Spinner />Preparing PDF...</> : '↓ Download PDF'}
+          {downloading ? <><Spinner />Preparing...</> : '↓ Download PDF'}
         </button>
+        {onDownloadDocx && (
+          <button
+            onClick={() => onDownloadDocx(savedContent)}
+            disabled={downloadingDocx}
+            className="flex-1 py-2.5 bg-white border border-slate-200 text-ink rounded-lg text-xs font-semibold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+          >
+            {downloadingDocx ? <><Spinner />Preparing...</> : '↓ Download Word'}
+          </button>
+        )}
       </div>
     </div>
   )
@@ -138,6 +151,7 @@ export default function MeetingDetailPage() {
   const [showMinutesForm, setShowMinutesForm] = useState(false)
   const [previewDoc, setPreviewDoc] = useState<'notice' | 'agenda' | 'minutes' | null>(null)
   const [downloading, setDownloading] = useState<string>('')
+  const [downloadingDocx, setDownloadingDocx] = useState<string>('')
 
   // Notice form
   const [noticeSignatory, setNoticeSignatory] = useState('')
@@ -321,6 +335,21 @@ export default function MeetingDetailPage() {
       await fetchMeeting()
       if (previewDoc === subtype) setPreviewDoc(null)
     } finally { setDeletePending('') }
+  }
+
+  async function downloadDocx(doc: MeetingDoc, htmlOverride?: string) {
+    setDownloadingDocx(doc.doc_subtype)
+    try {
+      const { generateDocx } = await import('@/lib/docx-generator')
+      const fileName = `${client?.company_name?.replace(/[^a-z0-9]/gi, '_') || 'doc'}_${doc.doc_subtype}_${meeting?.meeting_date || ''}`
+      await generateDocx(htmlOverride ?? doc.content, fileName, {
+        companyName: client?.company_name || '',
+        cin: client?.cin || '',
+        meetingDate: meeting?.meeting_date || '',
+      })
+    } catch (err) {
+      console.error('DOCX error:', err)
+    } finally { setDownloadingDocx('') }
   }
 
   async function downloadPDF(doc: MeetingDoc, htmlOverride?: string) {
@@ -609,7 +638,9 @@ export default function MeetingDetailPage() {
                 <DocPreview
                   content={noticeDoc.content}
                   onDownload={(html) => downloadPDF(noticeDoc, html)}
+                  onDownloadDocx={(html) => downloadDocx(noticeDoc, html)}
                   downloading={downloading === 'notice'}
+                  downloadingDocx={downloadingDocx === 'notice'}
                 />
               )}
 
@@ -827,7 +858,9 @@ export default function MeetingDetailPage() {
                 <DocPreview
                   content={agendaDoc.content}
                   onDownload={(html) => downloadPDF(agendaDoc, html)}
+                  onDownloadDocx={(html) => downloadDocx(agendaDoc, html)}
                   downloading={downloading === 'agenda'}
+                  downloadingDocx={downloadingDocx === 'agenda'}
                 />
               )}
 
@@ -976,7 +1009,9 @@ export default function MeetingDetailPage() {
                 <DocPreview
                   content={minutesDoc.content}
                   onDownload={(html) => downloadPDF(minutesDoc, html)}
+                  onDownloadDocx={(html) => downloadDocx(minutesDoc, html)}
                   downloading={downloading === 'minutes'}
+                  downloadingDocx={downloadingDocx === 'minutes'}
                 />
               )}
 
@@ -993,7 +1028,7 @@ export default function MeetingDetailPage() {
             {/* Meeting summary */}
             <div className="bg-white border border-slate-100 rounded-2xl p-5">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Meeting Details</p>
-              <div className="space-y-2.5">
+              <div className="space-y-2.5 min-w-0">
                 <div>
                   <p className="text-xs text-slate-400">Date</p>
                   <p className="text-sm font-medium text-ink">{formatDisplayDate(meeting.meeting_date)}</p>
@@ -1002,9 +1037,9 @@ export default function MeetingDetailPage() {
                   <p className="text-xs text-slate-400">Time</p>
                   <p className="text-sm font-medium text-ink">{formatTime(meeting.meeting_time)}</p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-xs text-slate-400">Venue</p>
-                  <p className="text-sm font-medium text-ink leading-snug break-words">{venue}</p>
+                  <p className="text-sm font-medium text-ink leading-snug break-words overflow-hidden">{venue}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400">Type</p>

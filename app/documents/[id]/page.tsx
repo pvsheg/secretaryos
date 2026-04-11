@@ -25,6 +25,7 @@ export default function DocumentPage() {
   const [doc, setDoc] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [downloading, setDownloading] = useState(false)
+  const [downloadingDocx, setDownloadingDocx] = useState(false)
 
   useEffect(() => {
     async function fetchDoc() {
@@ -42,13 +43,16 @@ export default function DocumentPage() {
     fetchDoc()
   }, [])
 
+  function getFileName() {
+    return `${(doc?.clients?.company_name || 'document').replace(/[^a-z0-9]/gi, '_')}_${doc?.type}_${doc?.metadata?.meeting_date || 'document'}`
+  }
+
   async function downloadPDF() {
     if (!doc) return
     setDownloading(true)
     try {
       const { generatePDF } = await import('@/lib/pdf-generator')
-      const fileName = `${(doc.clients?.company_name || 'document').replace(/[^a-z0-9]/gi, '_')}_${doc.type}_${doc.metadata?.meeting_date || 'document'}`
-      await generatePDF(doc.content, fileName, {
+      await generatePDF(doc.content, getFileName(), {
         companyName: doc.clients?.company_name || '',
         docType: doc.type,
         meetingDate: doc.metadata?.meeting_date || '',
@@ -58,6 +62,22 @@ export default function DocumentPage() {
       console.error('PDF generation failed:', err)
     }
     setDownloading(false)
+  }
+
+  async function downloadDocx() {
+    if (!doc) return
+    setDownloadingDocx(true)
+    try {
+      const { generateDocx } = await import('@/lib/docx-generator')
+      await generateDocx(doc.content, getFileName(), {
+        companyName: doc.clients?.company_name || '',
+        cin: doc.clients?.cin || '',
+        meetingDate: doc.metadata?.meeting_date || '',
+      })
+    } catch (err) {
+      console.error('DOCX generation failed:', err)
+    }
+    setDownloadingDocx(false)
   }
 
   if (loading) return (
@@ -101,15 +121,26 @@ export default function DocumentPage() {
               </p>
             )}
           </div>
-          <button
-            onClick={downloadPDF}
-            disabled={downloading}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-ink text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto sm:flex-shrink-0"
-          >
-            {downloading ? (
-              <><span className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin inline-block"></span>Generating...</>
-            ) : '↓ Download PDF'}
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto sm:flex-shrink-0">
+            <button
+              onClick={downloadPDF}
+              disabled={downloading}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-ink text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {downloading ? (
+                <><span className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin inline-block"></span>Generating...</>
+              ) : '↓ Download PDF'}
+            </button>
+            <button
+              onClick={downloadDocx}
+              disabled={downloadingDocx}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-ink text-sm font-semibold rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {downloadingDocx ? (
+                <><span className="w-3 h-3 border border-slate-300 border-t-ink rounded-full animate-spin inline-block"></span>Generating...</>
+              ) : '↓ Download Word'}
+            </button>
+          </div>
         </div>
 
         {/* Document preview */}

@@ -90,9 +90,10 @@ function generateNoticeHTML(data: {
 
   return `
 <p class="doc-title-main">${companyName.toUpperCase()}</p>
-<p class="doc-center">(CIN: ${cin})<br>Registered Office: ${registeredOffice}${email ? `<br>Email: ${email}` : ''}</p>
+<p class="doc-center">(CIN: ${cin})<br>Registered Office: ${registeredOffice}</p>
 
-<p class="doc-line" style="text-align:right;margin-top:18px;">Date: ${formatNoticeDate(dateOfNotice)}</p>
+<p class="doc-line" style="margin-top:16px;">Date: ${formatNoticeDate(dateOfNotice)}</p>
+<p class="doc-center" style="margin-top:6px;">${email ? `Email: ${email}` : ''}</p>
 
 <p class="doc-line" style="margin-top:18px;">To,<br>The Board of Directors<br><strong>${companyName}</strong><br>${registeredOffice}</p>
 
@@ -123,6 +124,7 @@ ${specialInstructions ? `\n<p class="doc-line" style="margin-top:10px;">${specia
     <p><strong>${directorName}</strong></p>
     <p>${directorDesignation}</p>
     <p>DIN: ${directorDin}</p>
+    <p>Place: __________</p>
   </div>
 </div>
 `.trim()
