@@ -6,6 +6,8 @@ import type { DocumentWithClient } from '@/types'
 
 const TYPE_LABELS: Record<string, string> = {
   board_minutes: 'Board Minutes',
+  board_notice: 'Board Notice',
+  board_agenda: 'Board Agenda',
   agm_notice: 'AGM Notice',
   roc_filing: 'ROC Filing',
   other: 'Other',
@@ -13,6 +15,8 @@ const TYPE_LABELS: Record<string, string> = {
 
 const TYPE_COLORS: Record<string, string> = {
   board_minutes: 'bg-blue-50 text-blue-700 border-blue-200',
+  board_notice: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  board_agenda: 'bg-cyan-50 text-cyan-700 border-cyan-200',
   agm_notice: 'bg-purple-50 text-purple-700 border-purple-200',
   roc_filing: 'bg-green-50 text-green-700 border-green-200',
   other: 'bg-slate-50 text-slate-600 border-slate-200',

@@ -8,6 +8,8 @@ import { AGENDA_LIBRARY } from '@/lib/agenda-library'
 
 const DOC_TYPE_LABELS: Record<string, string> = {
   board_minutes: 'Board Minutes',
+  board_notice: 'Board Notice',
+  board_agenda: 'Board Agenda',
   agm_notice: 'AGM Notice',
   roc_filing: 'ROC Filing',
 }
@@ -207,7 +209,11 @@ export default function DocumentPage() {
               {doc.metadata.agenda_items && (
                 <div className="sm:col-span-2">
                   <p className="text-xs text-slate-400 mb-0.5">Additional agenda</p>
-                  <p className="text-sm text-ink whitespace-pre-line">{doc.metadata.agenda_items}</p>
+                  <p className="text-sm text-ink whitespace-pre-line">
+                    {Array.isArray(doc.metadata.agenda_items)
+                      ? doc.metadata.agenda_items.map((item: any) => item?.label || item?.key || String(item)).join('\n')
+                      : doc.metadata.agenda_items}
+                  </p>
                 </div>
               )}
               {doc.metadata.special_instructions && (
