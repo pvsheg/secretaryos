@@ -57,9 +57,8 @@ OUTPUT FORMAT — use ONLY these exact HTML classes, no markdown:
 
 DOCUMENT STRUCTURE (follow exactly):
 1. <p class="doc-title-main">COMPANY NAME</p>
-2. <p class="doc-center">(CIN: ...)<br>Registered Office: ...</p>
+2. <p class="doc-center">(CIN: ...)<br>Registered Office: ...<br>Tel: __________ &nbsp;|&nbsp; Email: [email if provided, else __________] &nbsp;|&nbsp; Website: __________</p>
 3. <p class="doc-line" style="margin-top:16px;">Date: [date of agenda]</p>
-   <p class="doc-center" style="margin-top:6px;">Tel: __________ &nbsp;|&nbsp; Email: [email if provided, else __________] &nbsp;|&nbsp; Website: __________</p>
 4. <p class="doc-line"><strong>AGENDA FOR THE [Nth] BOARD MEETING OF [COMPANY NAME] TO BE HELD ON [DAY, DATE], AT [TIME] AT [VENUE]-</strong></p>
 5. <p class="doc-section">AGENDA ITEMS</p>
 6. For each item:
