@@ -59,6 +59,13 @@ export default function DocumentPage() {
         docType: doc.type,
         meetingDate: doc.metadata?.meeting_date || '',
         cin: doc.clients?.cin || '',
+        // Signatory fields for board_notice / board_agenda signatures
+        signatoryName: doc.metadata?.signatory_name || '',
+        signatoryDesignation: doc.metadata?.signatory_designation || '',
+        signatoryDin: doc.metadata?.signatory_din || '',
+        // Chairman fields for board_minutes signatures
+        chairmanName: doc.metadata?.chairman_name || '',
+        chairmanDin: doc.metadata?.chairman_din || '',
       })
     } catch (err) {
       console.error('PDF generation failed:', err)
