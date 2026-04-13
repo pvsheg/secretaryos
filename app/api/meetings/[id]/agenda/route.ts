@@ -59,7 +59,7 @@ DOCUMENT STRUCTURE (follow exactly):
 1. <p class="doc-title-main">COMPANY NAME</p>
 2. <p class="doc-center">(CIN: ...)<br>Registered Office: ...</p>
 3. <p class="doc-line" style="margin-top:16px;">Date: [date of agenda]</p>
-   [If email provided: <p class="doc-center" style="margin-top:6px;">Email: [email]</p>]
+   <p class="doc-center" style="margin-top:6px;">Tel: __________ &nbsp;|&nbsp; Email: [email if provided, else __________] &nbsp;|&nbsp; Website: __________</p>
 4. <p class="doc-line"><strong>AGENDA FOR THE [Nth] BOARD MEETING OF [COMPANY NAME] TO BE HELD ON [DAY, DATE], AT [TIME] AT [VENUE]-</strong></p>
 5. <p class="doc-section">AGENDA ITEMS</p>
 6. For each item:
@@ -86,7 +86,7 @@ export async function POST(
     // Fetch meeting with client
     const { data: meeting, error: meetingErr } = await supabase
       .from('meetings')
-      .select('*, clients(id, company_name, cin, registered_office)')
+      .select('*, clients(id, company_name, cin, registered_office, email)')
       .eq('id', params.id)
       .eq('user_id', user.id)
       .single()
@@ -147,7 +147,7 @@ COMPANY DETAILS:
 Company Name: ${client.company_name}
 CIN: ${client.cin}
 Registered Office: ${client.registered_office}
-${clientEmail ? `Email: ${clientEmail}` : '(No email — omit email line from document)'}
+Email: ${clientEmail || '(none — leave email blank as __________)'}
 
 MEETING DETAILS:
 Meeting Number (ordinal): ${signatoryMeta?.meeting_number ? `${signatoryMeta.meeting_number}` : '1'}

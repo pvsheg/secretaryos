@@ -202,10 +202,10 @@ function getDefaultTemplate(isDemo: boolean = false): string {
   body
 }
 #let doc-title(content) = { set align(center); set text(size: 13pt, weight: "bold"); upper(content); v(4pt) }
-#let doc-meeting-title(content) = { set align(left); set text(size: 11pt, weight: "bold"); upper(content); v(8pt) }
+#let doc-meeting-title(content) = { set align(left); set par(justify: true); set text(size: 11pt, weight: "bold"); upper(content); v(8pt) }
 #let doc-center(content) = { set align(center); set text(size: 11pt); content; v(2pt) }
-#let doc-divider() = { v(6pt); line(length: 100%, stroke: 0.5pt + black); v(6pt) }
-#let doc-section(content) = { v(14pt); set text(size: 11pt, weight: "bold", fill: black, tracking: 0.5pt); upper(content); v(2pt); line(length: 100%, stroke: 0.5pt + rgb("#cccccc")); v(4pt) }
+#let doc-divider() = { v(4pt); line(length: 100%, stroke: 0.5pt + black); v(8pt) }
+#let doc-section(content) = { v(8pt); set text(size: 11pt, weight: "bold", fill: black, tracking: 0.5pt); upper(content); v(4pt) }
 #let doc-line(content) = { pad(left: 0pt)[#set text(size: 11pt); #content]; v(3pt) }
 #let doc-resolution(content) = { v(6pt); block(width: 100%)[#set text(size: 11pt); #content]; v(4pt) }
 #let doc-further(content) = { v(3pt); block(width: 100%)[#set text(size: 11pt); #content]; v(4pt) }
