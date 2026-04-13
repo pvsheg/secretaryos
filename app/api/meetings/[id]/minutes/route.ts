@@ -48,9 +48,11 @@ CRITICAL RULES:
 6. Resolution text goes inside a <p class="doc-resolution"> tag
 7. RESOLVED FURTHER THAT is OPTIONAL — only add it when the item genuinely requires an additional enabling/authorisation clause. NEVER add more than one RESOLVED FURTHER THAT per item. Most items do NOT need it.
 8. If RESOLUTION NOTES are provided for an item, incorporate those details into the RESOLVED THAT text
+9. NEVER add any "Note:" explanatory paragraphs anywhere in the document. If quorum was not met, record that fact only in the Quorum section (item 02). Remove all meta-explanations from individual agenda items.
+10. Do NOT include any company letterhead at the top — the letterhead is prepended separately. Start DIRECTLY with the meeting title.
 
 OUTPUT FORMAT — use ONLY these exact HTML classes:
-- <p class="doc-title-main"> — main title (the "MINUTE OF THE..." heading), ALL CAPS
+- <p class="doc-meeting-title"> — main meeting title (the "MINUTE OF THE..." heading), ALL CAPS, left-aligned/justified
 - <p class="doc-section"> — section headers (PRESENT)
 - <p class="doc-line"> — all body text paragraphs, present list, item titles, context paragraphs
 - <p class="doc-resolution"> — RESOLVED THAT text (start with <strong>RESOLVED THAT</strong>)
@@ -58,8 +60,8 @@ OUTPUT FORMAT — use ONLY these exact HTML classes:
 
 DOCUMENT STRUCTURE (follow exactly):
 
-1. Title:
-<p class="doc-title-main">MINUTE OF THE [Nth] BOARD MEETING OF THE BOARD OF DIRECTORS OF [COMPANY NAME] HELD ON [DAY, DATE], AT [TIME] AT [VENUE]-</p>
+1. Title (justified, not centered):
+<p class="doc-meeting-title">MINUTE OF THE [Nth] BOARD MEETING OF THE BOARD OF DIRECTORS OF [COMPANY NAME] HELD ON [DAY, DATE], AT [TIME] AT [VENUE]-</p>
 
 2. Present section:
 <p class="doc-section">PRESENT</p>
@@ -243,8 +245,14 @@ Output clean HTML only using the specified CSS classes. Follow the document stru
       messages: [{ role: 'user', content: userPrompt }],
     })
 
-    let content = (message.content[0] as any).text || ''
-    content = content.replace(/```html|```/g, '').trim()
+    let aiContent = (message.content[0] as any).text || ''
+    aiContent = aiContent.replace(/```html|```/g, '').trim()
+
+    // Prepend static company letterhead to the AI-generated content
+    const letterhead = `<p class="doc-title-main">${client.company_name.toUpperCase()}</p>
+<p class="doc-center">(CIN: ${client.cin})<br>Registered Office: ${client.registered_office}</p>`
+
+    const content = letterhead + '\n' + aiContent
 
     // Delete existing minutes for this meeting
     await supabase

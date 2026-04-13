@@ -45,26 +45,28 @@ CRITICAL RULES:
 3. Number agenda items with zero-padded 2-digit numbers: 01. 02. 03. etc.
 4. Each agenda item has TWO parts: a bold numbered title line, then a plain description paragraph
 5. If an item has DRAFTING INSTRUCTIONS, incorporate those details into the description paragraph
-6. Only include Email in the doc-center block if an email address is actually provided — omit the line entirely if email is empty
+6. Only include Email in the email line if an email address is actually provided — omit the line entirely if email is empty
+7. AGENDA ITEMS section header must use plain text with NO color styling — just the standard doc-section class
 
 OUTPUT FORMAT — use ONLY these exact HTML classes, no markdown:
 - <p class="doc-title-main"> — company name, ALL CAPS
-- <p class="doc-center"> — (CIN: ...) on first line, then Registered Office, then Email if provided (use <br> between)
-- <p class="doc-line"> — all body text including the meeting title line and each agenda item title/description
-- <p class="doc-section"> — section header: AGENDA ITEMS
+- <p class="doc-center"> — (CIN: ...) on first line, then Registered Office (use <br> between lines; do NOT include email here)
+- <p class="doc-line"> — all body text including date line, email line, meeting title, and each agenda item title/description
+- <p class="doc-section"> — section header: AGENDA ITEMS (black text, no color)
 - <div class="doc-notice-sig"> — signature block at end
 
 DOCUMENT STRUCTURE (follow exactly):
 1. <p class="doc-title-main">COMPANY NAME</p>
-2. <p class="doc-center">(CIN: ...)<br>Registered Office: ...[<br>Email: ... only if email provided]</p>
-3. <p class="doc-line"><strong>AGENDA FOR THE [Nth] BOARD MEETING OF [COMPANY NAME] TO BE HELD ON [DAY, DATE], AT [TIME] AT [VENUE]-</strong></p>
-4. <p class="doc-section">AGENDA ITEMS</p>
-5. For each item:
+2. <p class="doc-center">(CIN: ...)<br>Registered Office: ...<br>Tel: __________ &nbsp;|&nbsp; Email: [email if provided, else __________] &nbsp;|&nbsp; Website: __________</p>
+3. <p class="doc-line" style="margin-top:16px;">Date: [date of agenda]</p>
+4. <p class="doc-line"><strong>AGENDA FOR THE [Nth] BOARD MEETING OF [COMPANY NAME] TO BE HELD ON [DAY, DATE], AT [TIME] AT [VENUE]-</strong></p>
+5. <p class="doc-section">AGENDA ITEMS</p>
+6. For each item:
    <p class="doc-line"><strong>01. [Item Title]</strong></p>
    <p class="doc-line">[One paragraph description of what this item covers, incorporating any DRAFTING INSTRUCTIONS]</p>
-6. <p class="doc-line" style="margin-top:20px;">With best regards,</p>
+7. <p class="doc-line" style="margin-top:20px;">With best regards,</p>
    <p class="doc-line">For <strong>[Company Name]</strong></p>
-   <div class="doc-notice-sig" style="margin-top:40px;"><div><div class="doc-sig-line"></div><p><strong>[Director Name]</strong></p><p>[Designation]</p><p>DIN: [DIN]</p></div></div>
+   <div class="doc-notice-sig" style="margin-top:40px;"><div><div class="doc-sig-line"></div><p><strong>[Director Name]</strong></p><p>[Designation]</p><p>DIN: [DIN]</p><p>Place: __________</p></div></div>
 
 SIGNATORY: If no signatory is provided, use "Authorised Signatory" as the name with blank DIN.`
 
@@ -83,7 +85,7 @@ export async function POST(
     // Fetch meeting with client
     const { data: meeting, error: meetingErr } = await supabase
       .from('meetings')
-      .select('*, clients(id, company_name, cin, registered_office)')
+      .select('*, clients(id, company_name, cin, registered_office, email)')
       .eq('id', params.id)
       .eq('user_id', user.id)
       .single()
@@ -143,11 +145,13 @@ export async function POST(
 COMPANY DETAILS:
 Company Name: ${client.company_name}
 CIN: ${client.cin}
-Registered Office: ${client.registered_office}${clientEmail ? `\nEmail: ${clientEmail}` : '\n(No email — omit email line from document)'}
+Registered Office: ${client.registered_office}
+Email: ${clientEmail || '(none — leave email blank as __________)'}
 
 MEETING DETAILS:
 Meeting Number (ordinal): ${signatoryMeta?.meeting_number ? `${signatoryMeta.meeting_number}` : '1'}
-Date: ${formatDate(meeting.meeting_date)}
+Date of Agenda: ${formatDate(meeting.meeting_date)}
+Meeting Date: ${formatDate(meeting.meeting_date)}
 Time: ${formatTime(meeting.meeting_time)}
 Venue: ${venue}
 

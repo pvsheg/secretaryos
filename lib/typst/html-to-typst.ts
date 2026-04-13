@@ -81,6 +81,10 @@ export function htmlToTypst(html: string, meta: TypstDocMetadata): string {
         typstLines.push(`#doc-title[${line.content}]`)
         typstLines.push('')
         break
+      case 'meeting-title':
+        typstLines.push(`#doc-meeting-title[${line.content}]`)
+        typstLines.push('')
+        break
       case 'center':
         typstLines.push(`#doc-center[${line.content}]`)
         break
@@ -126,7 +130,7 @@ export function htmlToTypst(html: string, meta: TypstDocMetadata): string {
 }
 
 interface ParsedLine {
-  type: 'title' | 'center' | 'section' | 'line' | 'resolution' | 'further' | 'sig' | 'notice-sig' | 'divider'
+  type: 'title' | 'meeting-title' | 'center' | 'section' | 'line' | 'resolution' | 'further' | 'sig' | 'notice-sig' | 'divider'
   content: string
 }
 
@@ -200,6 +204,9 @@ function parseHtmlToLines(html: string): ParsedLine[] {
     switch (className) {
       case 'doc-title-main':
         lines.push({ type: 'title', content })
+        break
+      case 'doc-meeting-title':
+        lines.push({ type: 'meeting-title', content })
         break
       case 'doc-center':
         lines.push({ type: 'center', content })

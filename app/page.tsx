@@ -42,7 +42,7 @@ export default async function RootPage() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-12 fade-in-4">
             <Link href="/auth" className="btn btn-primary text-base px-7 py-3 w-full sm:w-auto">
-              Start free — 3 documents included
+              Start free — 5 documents included
             </Link>
             <Link href="/pricing" className="btn btn-secondary text-base px-7 py-3 w-full sm:w-auto">
               View pricing
@@ -132,11 +132,58 @@ export default async function RootPage() {
           </div>
         </section>
 
+        {/* ── PRICING OVERVIEW ─────────────────────────────────────────── */}
+        <section className="py-16 px-4 sm:px-6 bg-white border-y border-gray-100">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-10">
+              <h2 className="font-serif text-3xl font-bold text-ink mb-2">Simple pricing that scales</h2>
+              <p className="text-gray-500">Start free. Upgrade when you need more.</p>
+            </div>
+            <div className="grid sm:grid-cols-3 gap-4 mb-6">
+              {[
+                { name: 'Free', price: '₹0', docs: '5 docs/month', note: 'Forever free', cta: 'Get started', featured: false },
+                { name: 'Professional', price: '₹499', docs: '100 docs/month', note: 'Most popular', cta: 'Start free trial', featured: true },
+                { name: 'Firm', price: '₹1,500', docs: '200 docs/month', note: 'For firms', cta: 'Start free trial', featured: false },
+              ].map(tier => (
+                <div key={tier.name} className={`rounded-2xl p-5 text-center border ${tier.featured ? 'border-teal bg-teal/5' : 'border-gray-100 bg-white'}`}>
+                  {tier.note && (
+                    <div className={`text-xs font-semibold mb-2 ${tier.featured ? 'text-teal' : 'text-gray-400'}`}>{tier.note}</div>
+                  )}
+                  <div className="font-semibold text-ink mb-1">{tier.name}</div>
+                  <div className="font-serif text-2xl font-bold text-ink mb-0.5">{tier.price}<span className="text-sm font-normal text-gray-400">/mo</span></div>
+                  <div className="text-xs text-gray-400 mb-4">{tier.docs}</div>
+                  <Link href="/pricing" className={`text-xs font-semibold px-4 py-2 rounded-lg transition-colors ${tier.featured ? 'bg-teal text-white hover:bg-teal-dark' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                    {tier.cta}
+                  </Link>
+                </div>
+              ))}
+            </div>
+            <div className="text-center">
+              <Link href="/pricing" className="text-sm text-teal font-medium hover:underline">See full pricing & feature comparison →</Link>
+            </div>
+          </div>
+        </section>
+
+        {/* ── REFERRAL BADGE ───────────────────────────────────────────── */}
+        <section className="py-10 px-4 sm:px-6">
+          <div className="max-w-3xl mx-auto">
+            <div className="bg-gradient-to-r from-teal/5 to-teal/10 border border-teal/20 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div>
+                <p className="font-semibold text-ink text-sm mb-0.5">Earn 20% by referring colleagues</p>
+                <p className="text-xs text-gray-500">Get ₹99.80/month per individual CS, ₹300/month per firm — recurring, no limits.</p>
+              </div>
+              <Link href="/referral" className="flex-shrink-0 text-sm font-semibold text-teal border border-teal/30 rounded-xl px-4 py-2 hover:bg-teal/5 transition-colors whitespace-nowrap">
+                Learn more →
+              </Link>
+            </div>
+          </div>
+        </section>
+
         {/* ── BOTTOM CTA ───────────────────────────────────────────────── */}
         <section className="py-16 px-4 sm:px-6">
-          <div className="max-w-2xl mx-auto text-center bg-ink text-white rounded-lg p-10">
+          <div className="max-w-2xl mx-auto text-center bg-ink text-white rounded-2xl p-10">
             <h2 className="font-serif text-3xl font-bold mb-3">Start generating today</h2>
-            <p className="text-gray-400 mb-7">3 free documents. No credit card. No setup.</p>
+            <p className="text-gray-400 mb-7">5 free documents. No credit card. No setup.</p>
             <Link href="/auth" className="btn btn-primary text-base px-8 py-3 bg-teal hover:bg-teal-dark">
               Create free account →
             </Link>
@@ -152,6 +199,7 @@ export default async function RootPage() {
             </span>
             <div className="flex items-center gap-5 text-sm text-gray-400">
               <Link href="/pricing" className="hover:text-ink transition-colors">Pricing</Link>
+              <Link href="/referral" className="hover:text-ink transition-colors">Referral</Link>
               <Link href="/auth" className="hover:text-ink transition-colors">Sign in</Link>
               <a href="mailto:pvsheg@gmail.com" className="hover:text-ink transition-colors">Contact</a>
             </div>
