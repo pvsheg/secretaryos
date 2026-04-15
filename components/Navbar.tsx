@@ -66,6 +66,9 @@ export default function Navbar() {
           )}>
           ✦ Generate
         </Link>
+        <Link href="/terms" className="text-xs text-gray-400 hover:text-ink transition-colors">
+          Terms
+        </Link>
         <button onClick={handleLogout} className="text-sm text-gray-400 hover:text-ink transition-colors">
           Sign out
         </button>

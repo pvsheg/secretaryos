@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase'
 import Navbar from '@/components/Navbar'
 import Link from 'next/link'
 import { AGENDA_LIBRARY } from '@/lib/agenda-library'
+import DocumentWarningScreen from '@/components/DocumentWarningScreen'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -184,6 +185,11 @@ export default function MeetingDetailPage() {
 
   const [deletePending, setDeletePending] = useState<string>('')
 
+  // First-document warning state
+  const [showDocWarning, setShowDocWarning] = useState(false)
+  const [pendingGeneration, setPendingGeneration] = useState<'notice' | 'agenda' | 'minutes' | null>(null)
+  const [firstDocWarningShown, setFirstDocWarningShown] = useState<boolean | null>(null)
+
   useEffect(() => {
     try {
       const stored = localStorage.getItem('sos_custom_agendas')
@@ -221,6 +227,20 @@ export default function MeetingDetailPage() {
   }, [meetingId])
 
   useEffect(() => { fetchMeeting() }, [fetchMeeting])
+
+  useEffect(() => {
+    async function checkWarningShown() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase
+        .from('subscriptions')
+        .select('first_document_warning_shown')
+        .eq('user_id', user.id)
+        .single()
+      setFirstDocWarningShown(data?.first_document_warning_shown ?? false)
+    }
+    checkWarningShown()
+  }, [])
 
   // ── Derived ─────────────────────────────────────────────────────────────────
   const noticeDoc = documents.find(d => d.doc_subtype === 'notice')
@@ -326,6 +346,41 @@ export default function MeetingDetailPage() {
       await fetchMeeting()
     } catch (err: any) { setMinutesError(err.message) }
     finally { setMinutesPending(false) }
+  }
+
+  async function markFirstDocWarningShown() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await supabase
+      .from('subscriptions')
+      .update({ first_document_warning_shown: true })
+      .eq('user_id', user.id)
+    setFirstDocWarningShown(true)
+  }
+
+  function triggerGeneration(type: 'notice' | 'agenda' | 'minutes') {
+    if (!firstDocWarningShown) {
+      setPendingGeneration(type)
+      setShowDocWarning(true)
+    } else {
+      if (type === 'notice') generateNotice()
+      else if (type === 'agenda') generateAgenda()
+      else generateMinutes()
+    }
+  }
+
+  async function handleWarningProceed() {
+    setShowDocWarning(false)
+    await markFirstDocWarningShown()
+    if (pendingGeneration === 'notice') generateNotice()
+    else if (pendingGeneration === 'agenda') generateAgenda()
+    else if (pendingGeneration === 'minutes') generateMinutes()
+    setPendingGeneration(null)
+  }
+
+  function handleWarningCancel() {
+    setShowDocWarning(false)
+    setPendingGeneration(null)
   }
 
   async function deleteDoc(subtype: string) {
@@ -467,8 +522,22 @@ export default function MeetingDetailPage() {
 
   return (
     <div className="min-h-screen bg-app-bg">
+      {showDocWarning && (
+        <DocumentWarningScreen
+          onProceed={handleWarningProceed}
+          onCancel={handleWarningCancel}
+        />
+      )}
       <Navbar />
       <main className="pt-24 pb-16 px-4 sm:px-6 max-w-6xl mx-auto">
+
+        {/* Disclaimer reminder (shown after first-doc warning has been seen) */}
+        {firstDocWarningShown && (
+          <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-2 text-xs text-amber-800">
+            <span className="flex-shrink-0">⚠</span>
+            <span>All generated documents are AI drafts. Review thoroughly before filing with ROC.</span>
+          </div>
+        )}
 
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-slate-400 mb-6">
@@ -621,7 +690,7 @@ export default function MeetingDetailPage() {
                   </div>
                   {noticeError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2.5">{noticeError}</p>}
                   <div className="flex gap-2">
-                    <button onClick={generateNotice} disabled={noticePending}
+                    <button onClick={() => triggerGeneration('notice')} disabled={noticePending}
                       className="flex-1 py-2.5 bg-ink text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
                       {noticePending ? <><Spinner />Generating...</> : '✦ Generate Notice'}
                     </button>
@@ -842,7 +911,7 @@ export default function MeetingDetailPage() {
                   </div>
                   {agendaError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2.5">{agendaError}</p>}
                   <div className="flex gap-2">
-                    <button onClick={generateAgenda} disabled={agendaPending}
+                    <button onClick={() => triggerGeneration('agenda')} disabled={agendaPending}
                       className="flex-1 py-2.5 bg-ink text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
                       {agendaPending ? <><Spinner />Generating...</> : '✦ Generate Agenda'}
                     </button>
@@ -993,7 +1062,7 @@ export default function MeetingDetailPage() {
 
                   {minutesError && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2.5">{minutesError}</p>}
                   <div className="flex gap-2">
-                    <button onClick={generateMinutes} disabled={minutesPending}
+                    <button onClick={() => triggerGeneration('minutes')} disabled={minutesPending}
                       className="flex-1 py-2.5 bg-ink text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
                       {minutesPending ? <><Spinner />Generating...</> : '✦ Generate Minutes'}
                     </button>

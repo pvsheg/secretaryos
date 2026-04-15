@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { isDisposableEmail } from '@/lib/disposable-domains'
+import TermsAgreementModal from '@/components/TermsAgreementModal'
 
 function AuthForm() {
   const router = useRouter()
@@ -17,6 +18,8 @@ function AuthForm() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [showTermsModal, setShowTermsModal] = useState(false)
 
   const ref = searchParams.get('ref')
 
@@ -48,12 +51,17 @@ function AuthForm() {
       setError('Please use your professional or personal email — temporary email services are not accepted.')
       return
     }
+    if (!termsAccepted) { setShowTermsModal(true); return }
     setLoading(true); setError('')
     const { error } = await supabase.auth.signUp({
       email, password,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
-        data: ref ? { referred_by_code: ref } : {},
+        data: {
+          ...(ref ? { referred_by_code: ref } : {}),
+          terms_accepted_at: new Date().toISOString(),
+          terms_version: '1.0',
+        },
       }
     })
     if (error) { setError(error.message); setLoading(false); return }
@@ -65,6 +73,11 @@ function AuthForm() {
 
   return (
     <div className="min-h-screen bg-app-bg flex flex-col items-center justify-center px-4 py-12">
+      {showTermsModal && (
+        <TermsAgreementModal
+          onAccept={() => { setTermsAccepted(true); setShowTermsModal(false); }}
+        />
+      )}
       <div className="w-full max-w-sm">
 
         <div className="text-center mb-8">
@@ -88,7 +101,7 @@ function AuthForm() {
             {/* Tabs */}
             <div className="flex gap-1 bg-gray-100 rounded-lg p-1 mb-5">
               {[{ id: 'signin', label: 'Sign in' }, { id: 'signup', label: 'Sign up' }].map(t => (
-                <button key={t.id} onClick={() => { setMode(t.id as any); setError(''); setConfirmPassword('') }}
+                <button key={t.id} onClick={() => { setMode(t.id as any); setError(''); setConfirmPassword(''); if (t.id === 'signup' && !termsAccepted) setShowTermsModal(true) }}
                   className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${mode === t.id ? 'bg-white text-ink shadow-sm' : 'text-gray-500'}`}>
                   {t.label}
                 </button>
@@ -103,6 +116,22 @@ function AuthForm() {
               <div className="bg-teal/5 border border-teal/20 rounded-lg p-3 text-sm text-teal-dark mb-4">
                 ✓ Referral applied — 30 days free on Growth plan
               </div>
+            )}
+
+            {mode === 'signup' && (
+              termsAccepted ? (
+                <div className="bg-teal/5 border border-teal/20 rounded-lg p-3 text-sm text-teal-dark mb-4 flex items-center gap-2">
+                  <span>✓</span>
+                  <span>Platform agreement accepted</span>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowTermsModal(true)}
+                  className="w-full bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 mb-4 text-left hover:bg-amber-100 transition-colors"
+                >
+                  ⚠ Review and accept the platform agreement to create your account
+                </button>
+              )
             )}
 
             <div className="space-y-3">

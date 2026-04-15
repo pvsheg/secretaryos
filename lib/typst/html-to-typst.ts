@@ -123,6 +123,9 @@ export function htmlToTypst(html: string, meta: TypstDocMetadata): string {
         typstLines.push(`  place: "${escapeStr(meta.place || 'India')}",`)
         typstLines.push(`)`)
         break
+      case 'disclaimer-footer':
+        typstLines.push(`#doc-disclaimer-footer[${line.content}]`)
+        break
     }
   }
 
@@ -130,7 +133,7 @@ export function htmlToTypst(html: string, meta: TypstDocMetadata): string {
 }
 
 interface ParsedLine {
-  type: 'title' | 'meeting-title' | 'center' | 'section' | 'line' | 'resolution' | 'further' | 'sig' | 'notice-sig' | 'divider'
+  type: 'title' | 'meeting-title' | 'center' | 'section' | 'line' | 'resolution' | 'further' | 'sig' | 'notice-sig' | 'divider' | 'disclaimer-footer'
   content: string
 }
 
@@ -228,6 +231,9 @@ function parseHtmlToLines(html: string): ParsedLine[] {
         break
       case 'doc-notice-sig':
         lines.push({ type: 'notice-sig', content: '' })
+        break
+      case 'doc-disclaimer-footer':
+        lines.push({ type: 'disclaimer-footer', content })
         break
     }
   }
